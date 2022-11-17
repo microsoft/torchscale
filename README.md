@@ -1,14 +1,11 @@
-# Project
+# OpenScale - Transformers at (any) Scale
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+Fundamental research to improve modeling generality and capability, as well as training stability and efficiency of scaling Transformers.
 
-As the maintainer of this project, please make a few updates:
+- Stability - [**DeepNet**](https://arxiv.org/abs/2203.00555): scaling Transformers to 1,000 Layers and beyond
+- Generality - [**Foundation Transformers (Magneto)**](https://arxiv.org/abs/2210.06423)
+- Efficiency - [**X-MoE**](https://arxiv.org/abs/2204.09179): scalable & finetunable sparse Mixture-of-Experts (MoE)
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
 
 ## Contributing
 
