@@ -1,3 +1,6 @@
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+
 from io import open
 from setuptools import find_packages, setup
 

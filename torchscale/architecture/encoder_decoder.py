@@ -1,3 +1,6 @@
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+
 import torch.nn as nn
 from torchscale.architecture.encoder import Encoder
 from torchscale.architecture.decoder import Decoder

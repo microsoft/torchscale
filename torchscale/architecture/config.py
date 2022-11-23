@@ -1,4 +1,5 @@
-
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
 
 class EncoderConfig(object):
     def __init__(self, **kwargs):

@@ -1,3 +1,6 @@
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+
 # Copyright (c) Facebook, Inc. and its affiliates. All rights reserved.
 #
 # This source code is licensed under the BSD license found in the

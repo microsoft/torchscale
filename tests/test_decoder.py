@@ -1,3 +1,6 @@
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+
 import pytest
 from torchscale.architecture.config import DecoderConfig
 from torchscale.architecture.decoder import Decoder

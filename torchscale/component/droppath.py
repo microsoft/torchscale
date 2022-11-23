@@ -1,3 +1,6 @@
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+
 from timm.models.layers import drop_path
 import torch.nn as nn
 

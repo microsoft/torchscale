@@ -1,3 +1,6 @@
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+
 import torch.nn as nn
 from torchscale.component.multihead_attention import MultiheadAttention
 from torchscale.component.multiway_network import MultiwayNetwork

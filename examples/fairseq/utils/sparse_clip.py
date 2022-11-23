@@ -1,3 +1,6 @@
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+
 import torch
 import warnings
 from fairseq.utils import multi_tensor_l2norm_available, multi_tensor_total_norm
