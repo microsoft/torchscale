@@ -14,7 +14,7 @@ It has the implementation of fundamental research to improve modeling generality
 
 ## News
 
-- November, 2022: TorchScale 0.1.1 released
+- November, 2022: TorchScale 0.1.1 released [[Paper](https://arxiv.org/abs/2211.13184)] [[PyPI](https://pypi.org/project/torchscale/)]
 
 ## Installation
 
@@ -113,6 +113,26 @@ Some implementations in TorchScale are either adapted from or inspired by the [F
 ## Citations
 
 If you find this repository useful, please consider citing our work:
+
+```
+@article{torchscale,
+  author    = {Shuming Ma and
+               Hongyu Wang and
+               Shaohan Huang and
+               Wenhui Wang and
+               Zewen Chi and
+               Li Dong and
+               Alon Benhaim and
+               Barun Patra and
+               Vishrav Chaudhary and
+               Xia Song and
+               Furu Wei},
+  title     = {TorchScale: Transformers at Scale},
+  journal   = {CoRR},
+  volume    = {abs/2211.13184},
+  year      = {2022}
+}
+```
 
 ```
 @article{deepnet,
