@@ -93,7 +93,7 @@ We plan to provide more examples regarding different tasks (e.g. vision pretrain
 ### Stability Evaluation
 
 <p align="center">
-  <img src="./assets/convergence.png" width="800"/>
+  <img src="https://publicmodel.blob.core.windows.net/torchscale/pic/convergence.png" width="800"/>
 </p>
 
 The training curve is smooth by using TorchScale, while the baseline Transformer cannot converge.
@@ -101,7 +101,7 @@ The training curve is smooth by using TorchScale, while the baseline Transformer
 ### Scaling-up Experiments
 
 <p align="center">
-  <img src="./assets/scaling_curve.png" width="800"/>
+  <img src="https://publicmodel.blob.core.windows.net/torchscale/pic/scaling_curve.png" width="800"/>
 </p>
 
 TorchScale supports arbitrary depths and widths, successfully scaling-up the models without pain.
