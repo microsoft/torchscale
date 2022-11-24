@@ -64,6 +64,39 @@ We also support the `Decoder` architecture and the `EncoderDecoder` architecture
 >>> print(encdec)
 ```
 
+## Key Features
+
+- [DeepNorm to improve the training stability of Post-LayerNorm Transformers](https://arxiv.org/abs/2203.00555)
+  * enabled by setting *deepnorm=True* in the `Config` class.
+
+- [SubLN for the model generality and the training stability](https://arxiv.org/abs/2210.06423)
+  * enabled by *subln=True*. This is enabled by default.
+  * Note that SubLN and DeepNorm cannot be used in one single model.
+
+- [X-MoE: efficient and finetunable sparse MoE modeling](https://arxiv.org/abs/2204.09179)
+  * enabled by *use_xmoe=True*.
+
+- [Multiway architecture for multimodality](https://arxiv.org/abs/2208.10442)
+  * enabled by *multiway=True*.
+
+- [Relative position bias](https://arxiv.org/abs/1910.10683)
+  * enabled by adjusting *rel_pos_buckets* and *max_rel_pos*.
+
+- [SparseClip: improving the gradient clipping for sparse MoE models](https://arxiv.org/abs/2211.13184)
+  * we provide a [sample code](examples/fairseq/utils/sparse_clip.py) that can be easily adapted to the FairSeq (or other) repo.
+
+Most of the features above can be used by simply passing the corresponding parameters to the config. For example:
+
+```python
+>>> from torchscale.architecture.config import EncoderConfig
+>>> from torchscale.architecture.encoder import Encoder
+
+>>> config = EncoderConfig(vocab_size=64000, deepnorm=True, multiway=True)
+>>> model = Encoder(config)
+
+>>> print(model)
+```
+
 ## Examples
 
 We have the examples of how to use TorchScale in the following scenarios/tasks:

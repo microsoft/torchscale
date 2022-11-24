@@ -45,8 +45,14 @@ class EncoderConfig(object):
 
         if self.deepnorm:
             self.encoder_normalize_before = False
+            self.subln = False
         if self.subln:
             self.encoder_normalize_before = True
+            self.deepnorm = False
+        if self.use_xmoe:
+            self.moe_normalize_gate_prob_before_dropping = True
+            self.moe_second_expert_policy = "random"
+            assert self.moe_freq > 0 and self.moe_expert_count > 0
 
     def override(self, args):
         for hp in self.__dict__.keys():
@@ -93,9 +99,15 @@ class DecoderConfig(object):
         self.ddp_rank = kwargs.pop("ddp_rank", 0)
 
         if self.deepnorm:
-            self.decoder_normalize_before = False
+            self.encoder_normalize_before = False
+            self.subln = False
         if self.subln:
-            self.decoder_normalize_before = True
+            self.encoder_normalize_before = True
+            self.deepnorm = False
+        if self.use_xmoe:
+            self.moe_normalize_gate_prob_before_dropping = True
+            self.moe_second_expert_policy = "random"
+            assert self.moe_freq > 0 and self.moe_expert_count > 0
 
     def override(self, args):
         for hp in self.__dict__.keys():
@@ -151,9 +163,15 @@ class EncoderDecoderConfig(object):
         if self.deepnorm:
             self.encoder_normalize_before = False
             self.decoder_normalize_before = False
+            self.subln = False
         if self.subln:
             self.encoder_normalize_before = True
             self.decoder_normalize_before = True
+            self.deepnorm = False
+        if self.use_xmoe:
+            self.moe_normalize_gate_prob_before_dropping = True
+            self.moe_second_expert_policy = "random"
+            assert self.moe_freq > 0 and self.moe_expert_count > 0
 
     def override(self, args):
         for hp in self.__dict__.keys():
