@@ -154,21 +154,12 @@ If you find this repository useful, please consider citing our work:
 ```
 
 ```
-@article{xmoe,
-  author    = {Zewen Chi and
-               Li Dong and
-               Shaohan Huang and
-               Damai Dai and
-               Shuming Ma and
-               Barun Patra and
-               Saksham Singhal and
-               Payal Bajaj and
-               Xia Song and
-               Furu Wei},
-  title     = {On the Representation Collapse of Sparse Mixture of Experts},
-  journal   = {CoRR},
-  volume    = {abs/2204.09179},
-  year      = {2022}
+@inproceedings{xmoe,
+  title={On the Representation Collapse of Sparse Mixture of Experts},
+  author={Zewen Chi and Li Dong and Shaohan Huang and Damai Dai and Shuming Ma and Barun Patra and Saksham Singhal and Payal Bajaj and Xia Song and Xian-Ling Mao and Heyan Huang and Furu Wei},
+  booktitle={Advances in Neural Information Processing Systems},
+  year={2022},
+  url={https://openreview.net/forum?id=mWaYC6CZf5}
 }
 ```
 
