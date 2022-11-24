@@ -116,18 +116,8 @@ If you find this repository useful, please consider citing our work:
 
 ```
 @article{torchscale,
-  author    = {Shuming Ma and
-               Hongyu Wang and
-               Shaohan Huang and
-               Wenhui Wang and
-               Zewen Chi and
-               Li Dong and
-               Alon Benhaim and
-               Barun Patra and
-               Vishrav Chaudhary and
-               Xia Song and
-               Furu Wei},
-  title     = {TorchScale: Transformers at Scale},
+  author    = {Shuming Ma and Hongyu Wang and Shaohan Huang and Wenhui Wang and Zewen Chi and Li Dong and Alon Benhaim and Barun Patra and Vishrav Chaudhary and Xia Song and Furu Wei},
+  title     = {{TorchScale}: {Transformers} at Scale},
   journal   = {CoRR},
   volume    = {abs/2211.13184},
   year      = {2022}
@@ -136,13 +126,8 @@ If you find this repository useful, please consider citing our work:
 
 ```
 @article{deepnet,
-  author    = {Hongyu Wang and
-               Shuming Ma and
-               Li Dong and
-               Shaohan Huang and
-               Dongdong Zhang and
-               Furu Wei},
-  title     = {{DeepNet}: Scaling Transformers to 1,000 Layers},
+  author    = {Hongyu Wang and Shuming Ma and Li Dong and Shaohan Huang and Dongdong Zhang and Furu Wei},
+  title     = {{DeepNet}: Scaling {Transformers} to 1,000 Layers},
   journal   = {CoRR},
   volume    = {abs/2203.00555},
   year      = {2022},
@@ -151,22 +136,8 @@ If you find this repository useful, please consider citing our work:
 
 ```
 @article{magneto,
-  author    = {Hongyu Wang and
-               Shuming Ma and
-               Shaohan Huang and
-               Li Dong and
-               Wenhui Wang and
-               Zhiliang Peng and
-               Yu Wu and
-               Payal Bajaj and
-               Saksham Singhal and
-               Alon Benhaim and
-               Barun Patra and
-               Zhun Liu and
-               Vishrav Chaudhary and
-               Xia Song and
-               Furu Wei},
-  title     = {Foundation Transformers},
+  author    = {Hongyu Wang and Shuming Ma and Shaohan Huang and Li Dong and Wenhui Wang and Zhiliang Peng and Yu Wu and Payal Bajaj and Saksham Singhal and Alon Benhaim and Barun Patra and Zhun Liu and Vishrav Chaudhary and Xia Song and Furu Wei},
+  title     = {Foundation {Transformers}},
   journal   = {CoRR},
   volume    = {abs/2210.06423},
   year      = {2022}
