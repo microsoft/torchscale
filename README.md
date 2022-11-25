@@ -67,17 +67,21 @@ We also support the `Decoder` architecture and the `EncoderDecoder` architecture
 ## Key Features
 
 - [DeepNorm to improve the training stability of Post-LayerNorm Transformers](https://arxiv.org/abs/2203.00555)
-  * enabled by setting *deepnorm=True* in the `Config` class.
+  * enabled by setting *deepnorm=True* in the `Config` class. 
+  * It adjusts both the residual connection and the initialization method according to the model architecture (i.e., encoder, decoder, or encoder-decoder).
 
 - [SubLN for the model generality and the training stability](https://arxiv.org/abs/2210.06423)
-  * enabled by *subln=True*. This is enabled by default.
+  * enabled by *subln=True*. This is enabled by default. 
+  * It introduces another LayerNorm to each sublayer and adjusts the initialization according to the model architecture.
   * Note that SubLN and DeepNorm cannot be used in one single model.
 
 - [X-MoE: efficient and finetunable sparse MoE modeling](https://arxiv.org/abs/2204.09179)
-  * enabled by *use_xmoe=True*.
+  * enabled by *use_xmoe=True*. 
+  * It replaces every *'moe_freq'* `FeedForwardNetwork` layers with the X-MoE layers.
 
 - [Multiway architecture for multimodality](https://arxiv.org/abs/2208.10442)
   * enabled by *multiway=True*.
+  * It provides a pool of Transformer's parameters used for different modalities.
 
 - [Relative position bias](https://arxiv.org/abs/1910.10683)
   * enabled by adjusting *rel_pos_buckets* and *max_rel_pos*.
