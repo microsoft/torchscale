@@ -25,13 +25,14 @@ testcases = [
     {"fsdp": True}
 ]
 
+
 @pytest.mark.parametrize("args", testcases)
 def test_decoder(args):
     config = EncoderDecoderConfig(**args)
     model = EncoderDecoder(
         config,
-        encoder_embed_tokens=TextEmbedding(64000, config.encoder_embed_dim), 
-        decoder_embed_tokens=TextEmbedding(64000, config.decoder_embed_dim), 
+        encoder_embed_tokens=TextEmbedding(64000, config.encoder_embed_dim),
+        decoder_embed_tokens=TextEmbedding(64000, config.decoder_embed_dim),
         encoder_embed_positions=PositionalEmbedding(config.max_source_positions, config.encoder_embed_dim),
         decoder_embed_positions=PositionalEmbedding(config.max_target_positions, config.decoder_embed_dim),
     )
@@ -41,6 +42,6 @@ def test_decoder(args):
 
     model(
         src_tokens=src_tokens,
-        prev_output_tokens=prev_output_tokens, 
+        prev_output_tokens=prev_output_tokens,
         features_only=True,
     )

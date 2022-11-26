@@ -355,7 +355,8 @@ def top2gating(
     if has_tutel:
         locations1_s = torch.sum(locations1 * mask1_, dim=1)
         locations2_s = torch.sum(locations2 * mask2_, dim=1)
-        return l_aux, metadata, capacity, num_experts, [indices1_s, indices2_s], [locations1_s, locations2_s], [gates1_s, gates2_s]
+        return l_aux, metadata, capacity, num_experts, \
+            [indices1_s, indices2_s], [locations1_s, locations2_s], [gates1_s, gates2_s]
 
     # Store the capacity location for each token
     locations1_s = torch.sum(locations1 * mask1, dim=1)

@@ -1,24 +1,21 @@
 # Copyright (c) 2022 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 
-import math
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Optional
 from dataclasses import dataclass, field
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from fairseq import utils
-from fairseq.distributed import fsdp_wrap
-from fairseq.models import BaseFairseqModel, FairseqIncrementalDecoder, register_model, register_model_architecture
+from fairseq.models import BaseFairseqModel, register_model, register_model_architecture
 from fairseq.dataclass import ChoiceEnum, FairseqDataclass
 from fairseq.models.transformer import (
     DEFAULT_MIN_PARAMS_TO_WRAP, Embedding
 )
 from fairseq.modules import PositionalEmbedding
 from fairseq.models.squad import SQuADHead
-from torch import Tensor
 from omegaconf import II
 from .machine_translation import MTEncoder as Encoder
 from torchscale.architecture.config import EncoderConfig
@@ -27,6 +24,7 @@ from apex.normalization import FusedLayerNorm as LayerNorm
 DEFAULT_MAX_SOURCE_POSITIONS = 1024
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class BertConfig(FairseqDataclass):
@@ -177,7 +175,10 @@ class BertConfig(FairseqDataclass):
     moe_eval_capacity_token_fraction: Optional[float] = field(
         default=0.25,
         metadata={
-            "help": "Default: 0.25, Fraction of tokens as capacity during validation, if set to negative, use same as training. range: (0.0, 1.0]."
+            "help": (
+                "Default: 0.25, Fraction of tokens as capacity during validation, "
+                "if set to negative, use same as training. range: (0.0, 1.0]."
+            )
         }
     )
     moe_normalize_expert_grad: Optional[str] = field(
@@ -190,7 +191,8 @@ class BertConfig(FairseqDataclass):
         default=False, metadata={"help": "records all to all perf stats during distributed training"}
     )
     dummy_a2a: Optional[bool] = field(
-        default=False, metadata={"help": "By passes all to all during distributed training by returning the input buffer as output"}
+        default=False, metadata={
+            "help": "By passes all to all during distributed training by returning the input buffer as output"}
     )
     moe_batch_prioritized_routing: Optional[bool] = field(
         default=False, metadata={"help": "if true orders token by the gate prob before capacity dropping."}
@@ -202,7 +204,7 @@ class BertConfig(FairseqDataclass):
     subln: Optional[bool] = field(
         default=False,
     )
-    
+
 
 @register_model("mlm", dataclass=BertConfig)
 class BertModel(BaseFairseqModel):
@@ -245,9 +247,9 @@ class BertModel(BaseFairseqModel):
         config.override(args)
 
         encoder = Encoder(
-            config, 
-            embed_tokens=embed_tokens, 
-            embed_positions=embed_positions, 
+            config,
+            embed_tokens=embed_tokens,
+            embed_positions=embed_positions,
             output_projection=lm_head,
             is_encoder_decoder=False,
             dictionary=task.dictionary,
@@ -259,14 +261,14 @@ class BertModel(BaseFairseqModel):
     def build_embedding(cls, args, dictionary, embed_dim, path=None):
         embed_tokens = Embedding(len(dictionary), embed_dim, dictionary.pad())
         return embed_tokens
-    
+
     @classmethod
     def build_lm_head(cls, args, embed_dim, output_dim, activation_fn, weight):
         return LMHead(embed_dim, output_dim, activation_fn, weight)
-    
+
     def output_layer(self, features, masked_tokens=None):
         return self.encoder.output_projection(features, masked_tokens=masked_tokens)
-    
+
     def register_classification_head(self, name, num_classes=None, inner_dim=None, **kwargs):
         """Register a classification head."""
         if name in self.classification_heads:
@@ -286,12 +288,12 @@ class BertModel(BaseFairseqModel):
             self.args.pooler_activation_fn,
             self.args.pooler_dropout,
         )
-    
+
     def register_question_answering_head(self, name, num_classes=None):
         self.classification_heads[name] = SQuADHead(
             self.args.encoder_embed_dim,
         )
-    
+
     def upgrade_state_dict_named(self, state_dict, name):
         prefix = name + '.' if name != '' else ''
 
@@ -342,15 +344,16 @@ class BertModel(BaseFairseqModel):
                 if prefix + 'classification_heads.' + k not in state_dict:
                     logger.info('Overwriting ' + prefix + 'classification_heads.' + k)
                     state_dict[prefix + 'classification_heads.' + k] = v
-    
+
     def forward(
-        self, 
-        src_tokens=None, 
+        self,
+        src_tokens=None,
         features_only=False,
         return_all_hiddens=False,
-        classification_head_name=None, 
+        classification_head_name=None,
         masked_tokens=None,
-        **kwargs):
+        **kwargs
+    ):
         encoder_out = self.encoder(src_tokens, features_only=True, return_all_hiddens=return_all_hiddens)
         x, extra = encoder_out["encoder_out"], encoder_out
         x = x.transpose(0, 1)
@@ -362,7 +365,7 @@ class BertModel(BaseFairseqModel):
 
         return x, extra
 
-    
+
 class ClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
@@ -388,6 +391,7 @@ class ClassificationHead(nn.Module):
         x = self.dropout(x)
         x = self.out_proj(x)
         return x
+
 
 class LMHead(nn.Module):
     """Head for masked language modeling."""

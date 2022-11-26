@@ -10,22 +10,20 @@ import logging
 import os
 from argparse import Namespace
 import json
-from omegaconf import MISSING, II, OmegaConf
-from typing import Any
+from omegaconf import MISSING, II
 
-import numpy as np
 from fairseq import utils
 from fairseq.data import Dictionary
 from fairseq.tasks import FairseqTask, register_task
 from .data.mlm_loader import MLMLoader
 from fairseq.dataclass import FairseqDataclass, ChoiceEnum
-from fairseq.data.encoders.sentencepiece_bpe import SentencepieceBPE
 import sentencepiece as spm
 
 logger = logging.getLogger(__name__)
 
 SAMPLE_BREAK_MODE_CHOICES = ChoiceEnum(["none", "complete", "complete_doc", "eos"])
 SHORTEN_METHOD_CHOICES = ChoiceEnum(["none", "truncate", "random_crop"])
+
 
 @dataclass
 class PretrainingConfig(FairseqDataclass):
@@ -163,11 +161,11 @@ class PLMTask(FairseqTask):
             'shuffle': True if split == 'train' else False,
         }
         self.datasets[split] = Namespace(**self.datasets[split])
-    
+
     def dataset(self, split):
         if split not in self.datasets:
             raise KeyError("Dataset not loaded: " + split)
-        
+
         return self.datasets[split]
 
     def get_batch_iterator(

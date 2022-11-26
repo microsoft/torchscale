@@ -6,33 +6,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import functools
-import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import torch
-import torch.nn as nn
 from fairseq import utils
-from fairseq.distributed import utils as dist_utils, fsdp_wrap
+from fairseq.distributed import utils as fsdp_wrap
 from fairseq import distributed_utils
-from fairseq import checkpoint_utils
 from fairseq.models import (
     FairseqEncoder,
     FairseqEncoderDecoderModel,
-    FairseqIncrementalDecoder,
     register_model,
     register_model_architecture,
 )
 from fairseq.models.transformer import Embedding
-from fairseq.modules import (
-    AdaptiveSoftmax,
-    FairseqDropout,
-    LayerDropModuleList,
-    LayerNorm,
-    PositionalEmbedding,
-    SinusoidalPositionalEmbedding,
-)
-from fairseq.modules.checkpoint_activations import checkpoint_wrapper
+from fairseq.modules import PositionalEmbedding
 from torchscale.architecture.encoder import Encoder
 from torchscale.architecture.config import EncoderConfig, DecoderConfig
 from .language_modeling import LMDecoder as MTDecoder
@@ -164,18 +151,26 @@ class TranslationModel(FairseqEncoderDecoderModel):
                             help="Use FP32 computations in MoE top2 gating function")
         parser.add_argument('--moe-second-expert-policy', type=str, default='sampling',
                             help="policy for second expert, options: all/sampling/random")
-        parser.add_argument('--moe-normalize-gate-prob-before-dropping', default=False, action='store_true',
-                            help="whether to normalize gate probs before or after dropping experts for capacity and randomization")
+        parser.add_argument(
+            '--moe-normalize-gate-prob-before-dropping', default=False, action='store_true',
+            help=(
+                "whether to normalize gate probs before or after dropping experts "
+                "for capacity and randomization"
+            )
+        )
         parser.add_argument('--moe-expert-ffn-dim', type=int, default=0,
                             help="MoE Expert FFN dimension")
         parser.add_argument('--moe-top1-expert', default=False, action='store_true',
                             help="Use top1 gate instead of top2")
-        parser.add_argument('--moe-eval-capacity-token-fraction', type=float, default=0.25,
-                            help="Fraction of tokens as capacity during validation" + \
-                                 "if set to negative, use same as training. range: (0.0, 1.0].")
+        parser.add_argument(
+            '--moe-eval-capacity-token-fraction', type=float, default=0.25,
+            help=(
+                "Fraction of tokens as capacity during validation"
+                "if set to negative, use same as training. range: (0.0, 1.0]."
+            )
+        )
         parser.add_argument('--moe-normalize-expert-grad', type=str, default='world_size',
                             help="Divide expert gradients by (1) 'world_size' (2) 'sqrt_world_size'")
-        
         parser.add_argument('--use-moe-pad-mask', default=False, action='store_true',
                             help="Don't route padding tokens to any expert")
         parser.add_argument('--use-xmoe', default=False, action='store_true',
@@ -207,7 +202,7 @@ class TranslationModel(FairseqEncoderDecoderModel):
             args.max_source_positions = DEFAULT_MAX_SOURCE_POSITIONS
         if getattr(args, "max_target_positions", None) is None:
             args.max_target_positions = DEFAULT_MAX_TARGET_POSITIONS
-        
+
         args.ddp_rank = distributed_utils.get_data_parallel_rank()
 
         src_dict, tgt_dict = task.source_dictionary, task.target_dictionary
@@ -279,18 +274,18 @@ class TranslationModel(FairseqEncoderDecoderModel):
 
         encoder = cls.build_encoder(
             args,
-            encoder_embed_tokens, 
+            encoder_embed_tokens,
             encoder_embed_positions,
-            src_dict, 
+            src_dict,
         )
         decoder = cls.build_decoder(
-            args, 
+            args,
             decoder_embed_tokens,
             decoder_embed_positions,
             output_projection,
             tgt_dict,
         )
-            
+
         if not args.share_all_embeddings:
             min_params_to_wrap = getattr(
                 args, "min_params_to_wrap", DEFAULT_MIN_PARAMS_TO_WRAP
@@ -317,9 +312,9 @@ class TranslationModel(FairseqEncoderDecoderModel):
         config.override(args)
 
         return MTEncoder(
-            config, 
-            embed_tokens, 
-            embed_positions, 
+            config,
+            embed_tokens,
+            embed_positions,
             is_encoder_decoder=True,
             dictionary=dictionary,
         )
@@ -330,8 +325,8 @@ class TranslationModel(FairseqEncoderDecoderModel):
         config.override(args)
 
         return MTDecoder(
-            config, 
-            embed_tokens, 
+            config,
+            embed_tokens,
             embed_positions,
             output_projection,
             is_encoder_decoder=True,
@@ -348,7 +343,7 @@ class TranslationModel(FairseqEncoderDecoderModel):
         **kwargs
     ):
         encoder_out = self.encoder(
-            src_tokens, 
+            src_tokens,
             return_all_hiddens=return_all_hiddens
         )
         decoder_out = self.decoder(
@@ -394,6 +389,7 @@ class MTEncoder(Encoder, FairseqEncoder):
 
     def max_positions(self):
         return self.embed_positions.max_positions
+
 
 @register_model_architecture("mt", "mt_base")
 def base_architecture(args):

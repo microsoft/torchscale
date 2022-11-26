@@ -7,6 +7,7 @@ from fairseq.utils import multi_tensor_l2norm_available, multi_tensor_total_norm
 import torch.distributed as dist
 import math
 
+
 @torch.no_grad()
 def clip_grad_norm_(params, max_norm, moe_expert_count, aggregate_norm_fn=None) -> torch.Tensor:
     def grad_exists(p):

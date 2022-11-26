@@ -23,6 +23,7 @@ testcases = [
     {"fsdp": True}
 ]
 
+
 @pytest.mark.parametrize("args", testcases)
 def test_encoder(args):
     config = EncoderConfig(**args)

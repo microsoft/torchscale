@@ -6,12 +6,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
+import logging
 from dataclasses import dataclass, field
 from typing import Optional
 import torch
 
-from fairseq import options, utils
+from fairseq import utils
 from fairseq import distributed_utils
 from fairseq.dataclass import ChoiceEnum, FairseqDataclass
 from fairseq.models import (
@@ -29,8 +29,8 @@ from torchscale.architecture.config import DecoderConfig
 from omegaconf import II
 
 DEFAULT_MAX_TARGET_POSITIONS = 1024
-import logging
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class LanguageConfig(FairseqDataclass):
@@ -151,7 +151,10 @@ class LanguageConfig(FairseqDataclass):
     moe_eval_capacity_token_fraction: Optional[float] = field(
         default=0.25,
         metadata={
-            "help": "Default: 0.25, Fraction of tokens as capacity during validation, if set to negative, use same as training. range: (0.0, 1.0]."
+            "help": (
+                "Default: 0.25, Fraction of tokens as capacity during validation, "
+                "if set to negative, use same as training. range: (0.0, 1.0]."
+            )
         }
     )
     moe_normalize_expert_grad: Optional[str] = field(
@@ -164,7 +167,8 @@ class LanguageConfig(FairseqDataclass):
         default=False, metadata={"help": "records all to all perf stats during distributed training"}
     )
     dummy_a2a: Optional[bool] = field(
-        default=False, metadata={"help": "By passes all to all during distributed training by returning the input buffer as output"}
+        default=False, metadata={
+            "help": "By passes all to all during distributed training by returning the input buffer as output"}
     )
     moe_batch_prioritized_routing: Optional[bool] = field(
         default=False, metadata={"help": "if true orders token by the gate prob before capacity dropping."}
@@ -238,10 +242,10 @@ class LanguageModel(FairseqLanguageModel):
             output_projection.weight = embed_tokens.weight
         else:
             output_projection = torch.nn.Linear(
-                decoder_embed_dim, len(task.dictionary), bias=False
+                args.decoder_embed_dim, len(task.dictionary), bias=False
             )
             torch.nn.init.normal_(
-                output_projection.weight, mean=0, std=decoder_embed_dim ** -0.5
+                output_projection.weight, mean=0, std=args.decoder_embed_dim ** -0.5
             )
 
         if (
@@ -252,22 +256,23 @@ class LanguageModel(FairseqLanguageModel):
                 and getattr(args, 'ddp_backend', None) != "fully_sharded"
             )
         ):
-            assert args.fp16_no_flatten_grads, "If training moe models, set --fp16-no-flatten-grads to calculate correct gradnorm"
-        
+            assert args.fp16_no_flatten_grads, \
+                   "If training moe models, set --fp16-no-flatten-grads to calculate correct gradnorm"
+
         args.ddp_rank = distributed_utils.get_data_parallel_rank()
 
         config = DecoderConfig()
         config.override(args)
 
         decoder = LMDecoder(
-            config, 
-            embed_tokens, 
+            config,
+            embed_tokens,
             embed_positions,
             output_projection,
             is_encoder_decoder=False,
             dictionary=task.dictionary,
         )
-                    
+
         return cls(args, decoder)
 
     @classmethod
@@ -283,7 +288,7 @@ class LMDecoder(Decoder, FairseqIncrementalDecoder):
 
     def max_positions(self):
         return self.embed_positions.max_positions
-    
+
     def reorder_incremental_state_scripting(
         self,
         incremental_state,
@@ -293,6 +298,7 @@ class LMDecoder(Decoder, FairseqIncrementalDecoder):
             for key in incremental_state[module]:
                 result = incremental_state[module][key].index_select(0, new_order)
                 incremental_state[module][key] = result
+
 
 @register_model_architecture("lm", "lm_base")
 def base_lm_architecture(args):
@@ -357,4 +363,3 @@ def base_lm_architecture(args):
     args.offload_activations = getattr(args, "offload_activations", False)
     if args.offload_activations:
         args.checkpoint_activations = True
-
