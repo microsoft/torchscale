@@ -1,6 +1,7 @@
 # Copyright (c) 2022 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 
+
 class EncoderConfig(object):
     def __init__(self, **kwargs):
         self.encoder_embed_dim = kwargs.pop("encoder_embed_dim", 768)
@@ -19,9 +20,13 @@ class EncoderConfig(object):
         self.moe_top1_expert = kwargs.pop("moe_top1_expert", False)
         self.moe_expert_count = kwargs.pop("moe_expert_count", 0)
         self.moe_gating_use_fp32 = kwargs.pop("moe_gating_use_fp32", True)
-        self.moe_eval_capacity_token_fraction = kwargs.pop("moe_eval_capacity_token_fraction", 0.25)
+        self.moe_eval_capacity_token_fraction = kwargs.pop(
+            "moe_eval_capacity_token_fraction", 0.25
+        )
         self.moe_second_expert_policy = kwargs.pop("moe_second_expert_policy", "random")
-        self.moe_normalize_gate_prob_before_dropping = kwargs.pop("moe_normalize_gate_prob_before_dropping", False)
+        self.moe_normalize_gate_prob_before_dropping = kwargs.pop(
+            "moe_normalize_gate_prob_before_dropping", False
+        )
         self.use_xmoe = kwargs.pop("use_xmoe", False)
         self.rel_pos_buckets = kwargs.pop("rel_pos_buckets", 0)
         self.max_rel_pos = kwargs.pop("max_rel_pos", 0)
@@ -29,7 +34,9 @@ class EncoderConfig(object):
         self.subln = kwargs.pop("subln", True)
         self.bert_init = kwargs.pop("bert_init", False)
         self.multiway = kwargs.pop("multiway", False)
-        self.share_encoder_input_output_embed = kwargs.pop("share_encoder_input_output_embed", False)
+        self.share_encoder_input_output_embed = kwargs.pop(
+            "share_encoder_input_output_embed", False
+        )
         self.max_source_positions = kwargs.pop("max_source_positions", 1024)
         self.no_output_layer = kwargs.pop("no_output_layer", False)
         # Text
@@ -78,9 +85,13 @@ class DecoderConfig(object):
         self.moe_top1_expert = kwargs.pop("moe_top1_expert", False)
         self.moe_expert_count = kwargs.pop("moe_expert_count", 0)
         self.moe_gating_use_fp32 = kwargs.pop("moe_gating_use_fp32", True)
-        self.moe_eval_capacity_token_fraction = kwargs.pop("moe_eval_capacity_token_fraction", 0.25)
+        self.moe_eval_capacity_token_fraction = kwargs.pop(
+            "moe_eval_capacity_token_fraction", 0.25
+        )
         self.moe_second_expert_policy = kwargs.pop("moe_second_expert_policy", "random")
-        self.moe_normalize_gate_prob_before_dropping = kwargs.pop("moe_normalize_gate_prob_before_dropping", False)
+        self.moe_normalize_gate_prob_before_dropping = kwargs.pop(
+            "moe_normalize_gate_prob_before_dropping", False
+        )
         self.use_xmoe = kwargs.pop("use_xmoe", False)
         self.rel_pos_buckets = kwargs.pop("rel_pos_buckets", 0)
         self.max_rel_pos = kwargs.pop("max_rel_pos", 0)
@@ -88,7 +99,9 @@ class DecoderConfig(object):
         self.subln = kwargs.pop("subln", True)
         self.bert_init = kwargs.pop("bert_init", False)
         self.multiway = kwargs.pop("multiway", False)
-        self.share_decoder_input_output_embed = kwargs.pop("share_decoder_input_output_embed", False)
+        self.share_decoder_input_output_embed = kwargs.pop(
+            "share_decoder_input_output_embed", False
+        )
         self.max_target_positions = kwargs.pop("max_target_positions", 1024)
         self.no_output_layer = kwargs.pop("no_output_layer", False)
         # Text
@@ -138,9 +151,13 @@ class EncoderDecoderConfig(object):
         self.moe_top1_expert = kwargs.pop("moe_top1_expert", False)
         self.moe_expert_count = kwargs.pop("moe_expert_count", 0)
         self.moe_gating_use_fp32 = kwargs.pop("moe_gating_use_fp32", True)
-        self.moe_eval_capacity_token_fraction = kwargs.pop("moe_eval_capacity_token_fraction", 0.25)
+        self.moe_eval_capacity_token_fraction = kwargs.pop(
+            "moe_eval_capacity_token_fraction", 0.25
+        )
         self.moe_second_expert_policy = kwargs.pop("moe_second_expert_policy", "random")
-        self.moe_normalize_gate_prob_before_dropping = kwargs.pop("moe_normalize_gate_prob_before_dropping", False)
+        self.moe_normalize_gate_prob_before_dropping = kwargs.pop(
+            "moe_normalize_gate_prob_before_dropping", False
+        )
         self.use_xmoe = kwargs.pop("use_xmoe", False)
         self.rel_pos_buckets = kwargs.pop("rel_pos_buckets", 0)
         self.max_rel_pos = kwargs.pop("max_rel_pos", 0)
@@ -149,7 +166,9 @@ class EncoderDecoderConfig(object):
         self.bert_init = kwargs.pop("bert_init", False)
         self.multiway = kwargs.pop("multiway", False)
         self.share_all_embeddings = kwargs.pop("share_all_embeddings", False)
-        self.share_decoder_input_output_embed = kwargs.pop("share_decoder_input_output_embed", False)
+        self.share_decoder_input_output_embed = kwargs.pop(
+            "share_decoder_input_output_embed", False
+        )
         self.max_source_positions = kwargs.pop("max_source_positions", 1024)
         self.max_target_positions = kwargs.pop("max_target_positions", 1024)
         self.no_output_layer = kwargs.pop("no_output_layer", False)

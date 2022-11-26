@@ -3,37 +3,35 @@
 
 import torch
 import torch.nn as nn
+
 from torchscale.architecture.encoder import Encoder
-from torchscale.component.embedding import VisionEmbedding, TextEmbedding, PositionalEmbedding
+from torchscale.component.embedding import (
+    PositionalEmbedding,
+    TextEmbedding,
+    VisionEmbedding,
+)
 from torchscale.component.multiway_network import MultiwayWrapper
 
 
 class BEiT3(nn.Module):
-
     def __init__(self, args, **kwargs):
         super().__init__()
         self.args = args
         assert args.multiway
         assert args.vocab_size > 0
         assert not args.share_encoder_input_output_embed
-        self.text_embed = TextEmbedding(
-            args.vocab_size,
-            args.encoder_embed_dim
-        )
+        self.text_embed = TextEmbedding(args.vocab_size, args.encoder_embed_dim)
         self.vision_embed = VisionEmbedding(
             args.img_size,
             args.patch_size,
             args.in_chans,
             args.encoder_embed_dim,
             contain_mask_token=True,
-            prepend_cls_token=True
+            prepend_cls_token=True,
         )
         embed_positions = MultiwayWrapper(
             args,
-            PositionalEmbedding(
-                args.max_source_positions,
-                args.encoder_embed_dim
-            ),
+            PositionalEmbedding(args.max_source_positions, args.encoder_embed_dim),
             dim=1,
         )
         self.encoder = Encoder(
@@ -71,7 +69,7 @@ class BEiT3(nn.Module):
                 encoder_padding_mask = torch.cat(
                     [
                         torch.zeros(x1.shape[:-1]).to(x1.device).bool(),
-                        text_padding_position
+                        text_padding_position,
                     ],
                     dim=1,
                 )

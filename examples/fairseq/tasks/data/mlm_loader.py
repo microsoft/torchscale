@@ -1,32 +1,32 @@
 # Copyright (c) 2022 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 
-import os
-import numpy as np
-import itertools
 import copy
+import itertools
+import os
 
+import numpy as np
 from infinibatch import iterators
+
 from .basic_loader import BaseBatchGen
 from .utils import NativeCheckpointableIterator, WeightIterator
 
 
 class MLMLoader(BaseBatchGen):
-
     def __init__(
-            self,
-            args,
-            dataset,
-            dictionary,
-            tokenizer,
-            max_tokens=None,
-            max_sentences=None,
-            max_positions=None,
-            ignore_invalid_inputs=False,
-            required_batch_size_multiple=1,
-            seed=1,
-            num_shards=1,
-            shard_id=0,
+        self,
+        args,
+        dataset,
+        dictionary,
+        tokenizer,
+        max_tokens=None,
+        max_sentences=None,
+        max_positions=None,
+        ignore_invalid_inputs=False,
+        required_batch_size_multiple=1,
+        seed=1,
+        num_shards=1,
+        shard_id=0,
     ):
         super().__init__()
         self.args = args
@@ -62,9 +62,7 @@ class MLMLoader(BaseBatchGen):
             log_empty_buffer_warning=True and self.shard_id == 0,
         )
 
-        prefetch_batches = iterators.MapIterator(
-            prefetch_batches, self._move_to_tensor
-        )
+        prefetch_batches = iterators.MapIterator(prefetch_batches, self._move_to_tensor)
 
         self._iter = prefetch_batches
 
@@ -73,25 +71,25 @@ class MLMLoader(BaseBatchGen):
         weights = []
 
         for data in self.data:
-            multilingual_iters.append(
-                self._tokenize(data)
-            )
-            if 'weight' in data:
-                weights.append(float(data['weight']))
+            multilingual_iters.append(self._tokenize(data))
+            if "weight" in data:
+                weights.append(float(data["weight"]))
             else:
-                weights.append(int(data['count']))
+                weights.append(int(data["count"]))
 
         if len(multilingual_iters) == 1:
             return multilingual_iters[0]
 
         sampling_iterator = WeightIterator(weights)
         control_iterator = NativeCheckpointableIterator(sampling_iterator)
-        tokenized_lines = iterators.MultiplexIterator(control_iterator, multilingual_iters)
+        tokenized_lines = iterators.MultiplexIterator(
+            control_iterator, multilingual_iters
+        )
 
         return tokenized_lines
 
     def _tokenize(self, data):
-        '''
+        """
         data:
         {
             'source': list[Path],
@@ -100,33 +98,35 @@ class MLMLoader(BaseBatchGen):
             'weight': float,
             'name': str,
         }
-        '''
+        """
         dataset = list(
-                zip(
-                    data['source'],
-                    itertools.repeat(data['source_lang']),
-                )
+            zip(
+                data["source"],
+                itertools.repeat(data["source_lang"]),
+            )
         )
 
         if self.shuffle:
-            chunk_files = \
-                iterators.InfinitePermutationSourceIterator(
-                    dataset,
-                    seed=self.seed,
-                    shuffle=self.shuffle,
-                    num_instances=self.num_shards,
-                    instance_rank=self.shard_id,
-                )
+            chunk_files = iterators.InfinitePermutationSourceIterator(
+                dataset,
+                seed=self.seed,
+                shuffle=self.shuffle,
+                num_instances=self.num_shards,
+                instance_rank=self.shard_id,
+            )
         else:
-            chunk_files = \
-                iterators.ChunkedSourceIterator(
-                    dataset,
-                    num_instances=self.num_shards,
-                    instance_rank=self.shard_id,
-                )
+            chunk_files = iterators.ChunkedSourceIterator(
+                dataset,
+                num_instances=self.num_shards,
+                instance_rank=self.shard_id,
+            )
 
-        tokenized_lines = iterators.SelectManyIterator(chunk_files, lambda files: self._read_from_files(*files))
-        tokenized_lines = iterators.SamplingRandomMapIterator(tokenized_lines, self._prepare, self.seed)
+        tokenized_lines = iterators.SelectManyIterator(
+            chunk_files, lambda files: self._read_from_files(*files)
+        )
+        tokenized_lines = iterators.SamplingRandomMapIterator(
+            tokenized_lines, self._prepare, self.seed
+        )
 
         return tokenized_lines
 
@@ -134,22 +134,29 @@ class MLMLoader(BaseBatchGen):
 
         if self.max_sentences is not None:
             if self.batch_read_ahead > 0:
-                lines = iterators.BlockwiseShuffleIterator(lines, self.batch_read_ahead, self.seed)
+                lines = iterators.BlockwiseShuffleIterator(
+                    lines, self.batch_read_ahead, self.seed
+                )
             batches = iterators.FixedBatchIterator(lines, self.max_sentences)
         else:
+
             def dynamic_batch_size(sample):
                 lengths = [len(x) for x in sample]
                 batch_size = self.max_tokens // max(lengths)
-                batch_size = batch_size // self.required_batch_size_multiple * self.required_batch_size_multiple
+                batch_size = (
+                    batch_size
+                    // self.required_batch_size_multiple
+                    * self.required_batch_size_multiple
+                )
                 return max(1, batch_size)
 
             batches = iterators.BucketedReadaheadBatchIterator(
-                    lines,
-                    read_ahead=self.batch_read_ahead,
-                    key=(lambda x: max(len(x[0]), len(x[1]))) if self.shuffle else None,
-                    batch_size=dynamic_batch_size,
-                    shuffle=self.shuffle,
-                    seed=self.seed,
+                lines,
+                read_ahead=self.batch_read_ahead,
+                key=(lambda x: max(len(x[0]), len(x[1]))) if self.shuffle else None,
+                batch_size=dynamic_batch_size,
+                shuffle=self.shuffle,
+                seed=self.seed,
             )
 
         def collate(batch):
@@ -160,38 +167,56 @@ class MLMLoader(BaseBatchGen):
             s2s_source_max_length = max([len(x[2]) for x in batch])
             s2s_target_max_length = max([len(x[3]) for x in batch])
 
-            mlm_source_ids = np.full(shape=(batch_size, mlm_source_max_length), dtype=np.int32,
-                                     fill_value=self.dictionary.pad())
-            mlm_target_ids = np.full(shape=(batch_size, mlm_target_max_length), dtype=np.int32,
-                                     fill_value=self.dictionary.pad())
-            s2s_source_ids = np.full(shape=(batch_size, s2s_source_max_length), dtype=np.int32,
-                                     fill_value=self.dictionary.pad())
-            s2s_target_ids = np.full(shape=(batch_size, s2s_target_max_length-1), dtype=np.int32,
-                                     fill_value=self.dictionary.pad())
-            s2s_prev_input_ids = np.full(shape=(batch_size, s2s_target_max_length-1), dtype=np.int32,
-                                         fill_value=self.dictionary.pad())
+            mlm_source_ids = np.full(
+                shape=(batch_size, mlm_source_max_length),
+                dtype=np.int32,
+                fill_value=self.dictionary.pad(),
+            )
+            mlm_target_ids = np.full(
+                shape=(batch_size, mlm_target_max_length),
+                dtype=np.int32,
+                fill_value=self.dictionary.pad(),
+            )
+            s2s_source_ids = np.full(
+                shape=(batch_size, s2s_source_max_length),
+                dtype=np.int32,
+                fill_value=self.dictionary.pad(),
+            )
+            s2s_target_ids = np.full(
+                shape=(batch_size, s2s_target_max_length - 1),
+                dtype=np.int32,
+                fill_value=self.dictionary.pad(),
+            )
+            s2s_prev_input_ids = np.full(
+                shape=(batch_size, s2s_target_max_length - 1),
+                dtype=np.int32,
+                fill_value=self.dictionary.pad(),
+            )
 
-            for i, (mlm_input_ids, mlm_label_ids, s2s_input_ids, s2s_label_ids) in enumerate(batch):
-                mlm_source_ids[i, :len(mlm_input_ids)] = mlm_input_ids
-                mlm_target_ids[i, :len(mlm_label_ids)] = mlm_label_ids
-                s2s_source_ids[i, :len(s2s_input_ids)] = s2s_input_ids
-                s2s_target_ids[i, :len(s2s_label_ids)-1] = s2s_label_ids[1:]
-                s2s_prev_input_ids[i, :len(s2s_label_ids)-1] = s2s_label_ids[:-1]
+            for i, (
+                mlm_input_ids,
+                mlm_label_ids,
+                s2s_input_ids,
+                s2s_label_ids,
+            ) in enumerate(batch):
+                mlm_source_ids[i, : len(mlm_input_ids)] = mlm_input_ids
+                mlm_target_ids[i, : len(mlm_label_ids)] = mlm_label_ids
+                s2s_source_ids[i, : len(s2s_input_ids)] = s2s_input_ids
+                s2s_target_ids[i, : len(s2s_label_ids) - 1] = s2s_label_ids[1:]
+                s2s_prev_input_ids[i, : len(s2s_label_ids) - 1] = s2s_label_ids[:-1]
 
             ret_batch = {
-                'net_input': {
-                    'src_tokens': mlm_source_ids.astype(np.int64),
+                "net_input": {
+                    "src_tokens": mlm_source_ids.astype(np.int64),
                 },
-                'target': mlm_target_ids.astype(np.int64),
-                'nsentences': batch_size,
-                'ntokens': sum([len(x[0]) for x in batch]),
+                "target": mlm_target_ids.astype(np.int64),
+                "nsentences": batch_size,
+                "ntokens": sum([len(x[0]) for x in batch]),
             }
 
             return ret_batch
 
-        padded_batches = iterators.MapIterator(
-            batches, collate
-        )
+        padded_batches = iterators.MapIterator(batches, collate)
 
         return padded_batches
 
@@ -221,7 +246,6 @@ class MLMLoader(BaseBatchGen):
         return nonmasked_tokens, masked_tokens
 
     def _span_corruption(self, _random, doc):
-
         def mask_tokens(i):
             return f"<mask_{i}>"
 
@@ -237,7 +261,9 @@ class MLMLoader(BaseBatchGen):
         else:
             possible_split_positions = list(range(1, noise_tokens_num))
             _random.shuffle(possible_split_positions)
-            noise_split_positions = sorted(possible_split_positions[:noise_spans_num-1])
+            noise_split_positions = sorted(
+                possible_split_positions[: noise_spans_num - 1]
+            )
             noise_split_positions = [0] + noise_split_positions + [noise_tokens_num]
 
         possible_insert_positions = list(range(nonnoise_tokens_num))
@@ -248,7 +274,7 @@ class MLMLoader(BaseBatchGen):
         last_end = 0
         for i in range(noise_spans_num):
             start_pos = noise_insert_positions[i] + noise_split_positions[i]
-            end_pos = noise_insert_positions[i] + noise_split_positions[i+1]
+            end_pos = noise_insert_positions[i] + noise_split_positions[i + 1]
             mask_id = self.dictionary.indices[mask_tokens(i)]
 
             if getattr(self.args, "remove_target_sentinel", False):
@@ -273,23 +299,25 @@ class MLMLoader(BaseBatchGen):
         file_path = os.path.join(self.data_dir, source_file)
 
         if not os.path.exists(file_path):
-            print('| file {} not exists'.format(file_path), flush=True)
+            print("| file {} not exists".format(file_path), flush=True)
             return iter([])  # skip bad file
 
-        with open(file_path, 'r', encoding='utf8') as f:
-            lines = f.read().strip().split('\n')
+        with open(file_path, "r", encoding="utf8") as f:
+            lines = f.read().strip().split("\n")
 
         doc = [self.dictionary.bos()]
         for line in lines:
             if line == "":
-                if self.sample_break_mode == 'complete_doc':
+                if self.sample_break_mode == "complete_doc":
                     # data.append(doc)
                     yield doc
                     doc = [self.dictionary.bos()]
                 continue
 
             tokenized_line = self.tokenizer.EncodeAsPieces(line)
-            tokenized_id = [self.dictionary.index(token) for token in tokenized_line] + [self.dictionary.eos_index]
+            tokenized_id = [
+                self.dictionary.index(token) for token in tokenized_line
+            ] + [self.dictionary.eos_index]
 
             if len(tokenized_id) > self.tokens_per_sample:
                 continue

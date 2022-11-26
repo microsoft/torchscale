@@ -2,12 +2,12 @@
 # Licensed under The MIT License [see LICENSE for details]
 
 import torch.nn as nn
-from torchscale.architecture.encoder import Encoder
+
 from torchscale.architecture.decoder import Decoder
+from torchscale.architecture.encoder import Encoder
 
 
 class EncoderDecoder(nn.Module):
-
     def __init__(
         self,
         args,
@@ -51,10 +51,7 @@ class EncoderDecoder(nn.Module):
         features_only=False,
         **kwargs
     ):
-        encoder_out = self.encoder(
-            src_tokens,
-            return_all_hiddens=return_all_hiddens
-        )
+        encoder_out = self.encoder(src_tokens, return_all_hiddens=return_all_hiddens)
         decoder_out = self.decoder(
             prev_output_tokens,
             encoder_out=encoder_out,

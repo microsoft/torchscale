@@ -2,12 +2,12 @@
 # Licensed under The MIT License [see LICENSE for details]
 
 import torch.nn as nn
+
 from torchscale.component.multihead_attention import MultiheadAttention
 from torchscale.component.multiway_network import MultiwayNetwork
 
 
 def init_bert_params(module):
-
     def normal_(data):
         data.copy_(data.cpu().normal_(mean=0.0, std=0.02).to(data.device))
 

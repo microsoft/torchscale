@@ -2,9 +2,10 @@
 # Licensed under The MIT License [see LICENSE for details]
 
 import pytest
+import torch
+
 from torchscale.architecture.config import DecoderConfig
 from torchscale.architecture.decoder import Decoder
-import torch
 
 testcases = [
     {},
@@ -20,7 +21,7 @@ testcases = [
     {"multiway": True},
     {"share_decoder_input_output_embed": True},
     {"checkpoint_activations": True},
-    {"fsdp": True}
+    {"fsdp": True},
 ]
 
 

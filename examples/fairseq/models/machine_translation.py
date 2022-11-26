@@ -6,12 +6,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import logging
 from typing import Dict, List, Optional, Tuple
 
 import torch
-from fairseq import utils
+from fairseq import distributed_utils, utils
 from fairseq.distributed import utils as fsdp_wrap
-from fairseq import distributed_utils
 from fairseq.models import (
     FairseqEncoder,
     FairseqEncoderDecoderModel,
@@ -20,12 +20,13 @@ from fairseq.models import (
 )
 from fairseq.models.transformer import Embedding
 from fairseq.modules import PositionalEmbedding
+from torch import Tensor
+
+from torchscale.architecture.config import DecoderConfig, EncoderConfig
 from torchscale.architecture.encoder import Encoder
-from torchscale.architecture.config import EncoderConfig, DecoderConfig
+
 from .language_modeling import LMDecoder as MTDecoder
 
-from torch import Tensor
-import logging
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_SOURCE_POSITIONS = 1024
@@ -35,7 +36,6 @@ DEFAULT_MIN_PARAMS_TO_WRAP = int(1e8)
 
 @register_model("mt")
 class TranslationModel(FairseqEncoderDecoderModel):
-
     def __init__(self, args, encoder, decoder):
         super().__init__(encoder, decoder)
         self.args = args
@@ -269,7 +269,7 @@ class TranslationModel(FairseqEncoderDecoderModel):
                 args.decoder_embed_dim, len(tgt_dict), bias=False
             )
             torch.nn.init.normal_(
-                output_projection.weight, mean=0, std=args.decoder_embed_dim ** -0.5
+                output_projection.weight, mean=0, std=args.decoder_embed_dim**-0.5
             )
 
         encoder = cls.build_encoder(
@@ -320,7 +320,9 @@ class TranslationModel(FairseqEncoderDecoderModel):
         )
 
     @classmethod
-    def build_decoder(cls, args, embed_tokens, embed_positions, output_projection, dictionary):
+    def build_decoder(
+        cls, args, embed_tokens, embed_positions, output_projection, dictionary
+    ):
         config = DecoderConfig()
         config.override(args)
 
@@ -342,10 +344,7 @@ class TranslationModel(FairseqEncoderDecoderModel):
         features_only: bool = False,
         **kwargs
     ):
-        encoder_out = self.encoder(
-            src_tokens,
-            return_all_hiddens=return_all_hiddens
-        )
+        encoder_out = self.encoder(src_tokens, return_all_hiddens=return_all_hiddens)
         decoder_out = self.decoder(
             prev_output_tokens,
             encoder_out=encoder_out,
@@ -365,15 +364,20 @@ class TranslationModel(FairseqEncoderDecoderModel):
 
 
 class MTEncoder(Encoder, FairseqEncoder):
-
     def forward(self, src_tokens, **kwargs):
         self_attn_padding_mask = src_tokens.eq(self.dictionary.pad())
-        return super().forward(src_tokens=src_tokens, encoder_padding_mask=self_attn_padding_mask, **kwargs)
+        return super().forward(
+            src_tokens=src_tokens, encoder_padding_mask=self_attn_padding_mask, **kwargs
+        )
 
     def reorder_encoder_out(self, encoder_out, new_order):
         new_encoder_out = encoder_out["encoder_out"].index_select(1, new_order)
-        new_encoder_embedding = encoder_out["encoder_embedding"].index_select(0, new_order)
-        new_encoder_padding_mask = encoder_out["encoder_padding_mask"].index_select(0, new_order)
+        new_encoder_embedding = encoder_out["encoder_embedding"].index_select(
+            0, new_order
+        )
+        new_encoder_padding_mask = encoder_out["encoder_padding_mask"].index_select(
+            0, new_order
+        )
 
         encoder_states = encoder_out["encoder_states"]
         if len(encoder_states) > 0:

@@ -3,6 +3,7 @@
 
 import torch
 from infinibatch.iterators import CheckpointableIterator
+
 from . import utils
 
 
@@ -25,7 +26,6 @@ class BaseBatchGen(CheckpointableIterator):
         raise NotImplementedError()
 
     def _move_to_tensor(self, batch):
-
         def to_tensor(x):
             return torch.tensor(x)
 

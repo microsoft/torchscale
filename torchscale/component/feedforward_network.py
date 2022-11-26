@@ -35,13 +35,19 @@ class set_torch_seed(object):
 
 
 def make_experts(args, embed_dim, expert_ffn_dim):
-    world_size = 1 if not torch.distributed.is_initialized() else torch.distributed.get_world_size()
+    world_size = (
+        1
+        if not torch.distributed.is_initialized()
+        else torch.distributed.get_world_size()
+    )
     expert_list = []
     ddp_rank = args.ddp_rank
     start_seed = torch.randint(1000000, (1,)).item()
     # at least as many experts than gpus
     if args.moe_expert_count >= world_size:
-        assert args.moe_expert_count % world_size == 0, f'{args.moe_expert_count}, {world_size}'
+        assert (
+            args.moe_expert_count % world_size == 0
+        ), f"{args.moe_expert_count}, {world_size}"
         local_moe_expert_count = args.moe_expert_count // world_size
         for i in range(local_moe_expert_count):
             with set_torch_seed(start_seed + ddp_rank * local_moe_expert_count + i):
@@ -52,11 +58,13 @@ def make_experts(args, embed_dim, expert_ffn_dim):
                         args.activation_fn,
                         args.dropout,
                         args.activation_dropout,
-                        args.subln
+                        args.subln,
                     )
                 )
     else:
-        assert world_size % args.moe_expert_count == 0, f'{world_size}, {args.moe_expert_count}'
+        assert (
+            world_size % args.moe_expert_count == 0
+        ), f"{world_size}, {args.moe_expert_count}"
 
         with set_torch_seed(start_seed + ddp_rank % args.moe_expert_count):
             expert_list.append(
@@ -66,7 +74,7 @@ def make_experts(args, embed_dim, expert_ffn_dim):
                     args.activation_fn,
                     args.dropout,
                     args.activation_dropout,
-                    args.subln
+                    args.subln,
                 )
             )
     experts = nn.ModuleList(expert_list)
@@ -83,7 +91,6 @@ def get_activation_fn(activation):
 
 
 class FeedForwardNetwork(nn.Module):
-
     def __init__(
         self,
         embed_dim,
@@ -91,12 +98,14 @@ class FeedForwardNetwork(nn.Module):
         activation_fn,
         dropout,
         activation_dropout,
-        subln=False
+        subln=False,
     ):
         super().__init__()
         self.embed_dim = embed_dim
         self.activation_fn = get_activation_fn(activation=str(activation_fn))
-        self.activation_dropout_module = torch.nn.Dropout(activation_dropout, inplace=True)
+        self.activation_dropout_module = torch.nn.Dropout(
+            activation_dropout, inplace=True
+        )
         self.dropout_module = torch.nn.Dropout(dropout, inplace=True)
         self.fc1 = nn.Linear(self.embed_dim, ffn_dim)
         self.fc2 = nn.Linear(ffn_dim, self.embed_dim)

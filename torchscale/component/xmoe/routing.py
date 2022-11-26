@@ -13,14 +13,14 @@
 # NOTE: This is a mirror of the code in
 # https://github.com/facebookresearch/fairscale/tree/master/fairscale/nn/moe
 
-from typing import Callable, Dict, Tuple, Optional
-
 import math
-import torch
-from torch import Tensor
-import torch.nn.functional as F
+from typing import Callable, Dict, Optional, Tuple
 
-from .moe_layer import has_tutel, fused_cumsum_sub_one
+import torch
+import torch.nn.functional as F
+from torch import Tensor
+
+from .moe_layer import fused_cumsum_sub_one, has_tutel
 
 # use a fixed temperature to compute balance loss
 TEMPERATURE_FOR_L_UAX = 0.07
@@ -65,13 +65,22 @@ def top1gating(
     indices1_s = torch.argmax(gates, dim=1)
     mask1 = one_hot(indices1_s, num_classes=num_experts, unsqueeze_indices=True)
     if input_mask is not None and input_mask.any():
-        nonpadding = ~ input_mask
+        nonpadding = ~input_mask
         mask1 = mask1 * nonpadding.unsqueeze(-1).to(mask1.dtype)
 
     # for logging (percent of tokens routed to each expert)
-    expert1_hist = 100 * torch.histc((indices1_s.squeeze() + 1), bins=num_experts, min=1, max=num_experts) / num_tokens
+    expert1_hist = (
+        100
+        * torch.histc(
+            (indices1_s.squeeze() + 1), bins=num_experts, min=1, max=num_experts
+        )
+        / num_tokens
+    )
     metadata["unused_expert1_count"] = (expert1_hist == 0).sum()
-    expert1_hist = torch.sort(expert1_hist, dim=0, descending=True).values + torch.finfo(torch.float32).tiny
+    expert1_hist = (
+        torch.sort(expert1_hist, dim=0, descending=True).values
+        + torch.finfo(torch.float32).tiny
+    )
 
     sample_count = max(math.ceil(num_experts * SAMPLE_FRACTION), 1)
     metadata["expert1_balance_top"] = expert1_hist[:sample_count].sum()
@@ -91,7 +100,21 @@ def top1gating(
 
     if has_tutel:
         locations1_s = torch.sum(locations1 * mask1, dim=1)
-        return l_aux, metadata, capacity, num_experts, [indices1_s, ], [locations1_s, ], [gates1_s, ]
+        return (
+            l_aux,
+            metadata,
+            capacity,
+            num_experts,
+            [
+                indices1_s,
+            ],
+            [
+                locations1_s,
+            ],
+            [
+                gates1_s,
+            ],
+        )
 
     # Remove locations outside capacity from mask
     mask1 = mask1 * torch.lt(locations1, capacity)
@@ -104,7 +127,8 @@ def top1gating(
     locations1_sc = one_hot(locations1_s, num_classes=capacity, unsqueeze_indices=True)
     combine1_sec = torch.bmm(
         # einsum("se,sc->sec")
-        gates1.unsqueeze(-1), locations1_sc.to(gates1.dtype).unsqueeze(1)
+        gates1.unsqueeze(-1),
+        locations1_sc.to(gates1.dtype).unsqueeze(1),
     )
     dispatch_mask = combine1_sec.bool()
     if use_fp32:
@@ -218,10 +242,10 @@ def one_hot(indices: torch.Tensor, num_classes: int, unsqueeze_indices=False) ->
     if unsqueeze_indices:
         indices = indices.unsqueeze(-1)
     assert indices.shape[-1] == 1, "last dimension of indices must be have size 1"
-    output = torch.zeros(indices.shape[:-1] + (num_classes,), device=indices.device, dtype=indices.dtype)
-    output.scatter_(
-        len(output.shape) - 1, indices, 1
+    output = torch.zeros(
+        indices.shape[:-1] + (num_classes,), device=indices.device, dtype=indices.dtype
     )
+    output.scatter_(len(output.shape) - 1, indices, 1)
     return output
 
 
@@ -235,7 +259,7 @@ def top2gating(
     logits: torch.Tensor,
     input_mask: Optional[torch.Tensor] = None,
     use_fp32=False,
-    second_expert_policy='sampling',
+    second_expert_policy="sampling",
     normalize_gate_prob_before_dropping=False,
     eval_mode=False,
     moe_eval_capacity_token_fraction=0.25,
@@ -260,7 +284,7 @@ def top2gating(
     # Create a mask for 1st's expert per token
     indices1_s = torch.argmax(gates, dim=1, keepdim=True)
     mask1 = one_hot(indices1_s, num_experts)
-    if second_expert_policy == 'sampling':
+    if second_expert_policy == "sampling":
         # Create a mask for 2nd's expert per token using Gumbel-max trick
         # https://timvieira.github.io/blog/post/2014/07/31/gumbel-max-trick/
         logits_w_noise = logits + gumbel_rsample(logits.shape, device=logits.device)
@@ -281,13 +305,13 @@ def top2gating(
         gates1_s = gates1_s / denom_s
         gates2_s = gates2_s / denom_s
 
-    if second_expert_policy == 'random':
+    if second_expert_policy == "random":
         sampled = (2 * gates2_s) > torch.rand_like(gates2_s)
         mask2 = mask2 * sampled.repeat(num_experts, 1).transpose(1, 0)
 
     # Compute locations in capacity buffer
     if input_mask is not None and input_mask.any():
-        nonpadding = ~ input_mask
+        nonpadding = ~input_mask
         mask1 = mask1 * nonpadding.unsqueeze(-1).to(mask1.dtype)
         mask2 = mask2 * nonpadding.unsqueeze(-1).to(mask1.dtype)
 
@@ -296,15 +320,22 @@ def top2gating(
         importance_scores = -1 * gates.max(dim=1)[0]
         sorted_mask1 = mask1[importance_scores.argsort(dim=0)]
         sorted_cumsum1 = fused_cumsum_sub_one(sorted_mask1) * sorted_mask1
-        importance_sorted_locations1 = sorted_cumsum1[importance_scores.argsort(dim=0).argsort(dim=0)]
+        importance_sorted_locations1 = sorted_cumsum1[
+            importance_scores.argsort(dim=0).argsort(dim=0)
+        ]
 
         sorted_mask2 = mask2[importance_scores.argsort(dim=0)]
         sorted_cumsum2 = fused_cumsum_sub_one(sorted_mask2) * sorted_mask2
-        importance_sorted_locations2 = sorted_cumsum2[importance_scores.argsort(dim=0).argsort(dim=0)]
+        importance_sorted_locations2 = sorted_cumsum2[
+            importance_scores.argsort(dim=0).argsort(dim=0)
+        ]
 
         importance_sorted_locations2 += torch.sum(mask1, dim=0, keepdim=True)
 
-        locations1, locations2 = importance_sorted_locations1, importance_sorted_locations2
+        locations1, locations2 = (
+            importance_sorted_locations1,
+            importance_sorted_locations2,
+        )
     else:
         locations1 = fused_cumsum_sub_one(mask1)
         locations2 = fused_cumsum_sub_one(mask2)
@@ -318,8 +349,12 @@ def top2gating(
     l_aux = l_aux * num_experts * num_experts
 
     # for logging purposes
-    metadata["overflow_expert1"] = 100 * torch.sum(mask1 * torch.ge(locations1, capacity)) / torch.sum(mask1)
-    metadata["overflow_expert2"] = 100 * torch.sum(mask2 * torch.ge(locations2, capacity)) / torch.sum(mask2)
+    metadata["overflow_expert1"] = (
+        100 * torch.sum(mask1 * torch.ge(locations1, capacity)) / torch.sum(mask1)
+    )
+    metadata["overflow_expert2"] = (
+        100 * torch.sum(mask2 * torch.ge(locations2, capacity)) / torch.sum(mask2)
+    )
 
     # Remove locations outside capacity from mask
     mask1_, mask2_ = mask1, mask2
@@ -327,13 +362,31 @@ def top2gating(
     mask2 = mask2 * torch.lt(locations2, capacity)
 
     # for logging (percent of tokens routed to each expert)
-    expert1_hist = 100 * torch.histc((indices1_s.squeeze() + 1), bins=num_experts, min=1, max=num_experts) / num_tokens
+    expert1_hist = (
+        100
+        * torch.histc(
+            (indices1_s.squeeze() + 1), bins=num_experts, min=1, max=num_experts
+        )
+        / num_tokens
+    )
     metadata["unused_expert1_count"] = (expert1_hist == 0).sum()
-    expert1_hist = torch.sort(expert1_hist, dim=0, descending=True).values + torch.finfo(torch.float32).tiny
+    expert1_hist = (
+        torch.sort(expert1_hist, dim=0, descending=True).values
+        + torch.finfo(torch.float32).tiny
+    )
 
-    expert2_hist = 100 * torch.histc((indices2_s.squeeze() + 1), bins=num_experts, min=1, max=num_experts) / num_tokens
+    expert2_hist = (
+        100
+        * torch.histc(
+            (indices2_s.squeeze() + 1), bins=num_experts, min=1, max=num_experts
+        )
+        / num_tokens
+    )
     metadata["unused_expert2_count"] = (expert2_hist == 0).sum()
-    expert2_hist = torch.sort(expert2_hist, dim=0, descending=True).values + torch.finfo(torch.float32).tiny
+    expert2_hist = (
+        torch.sort(expert2_hist, dim=0, descending=True).values
+        + torch.finfo(torch.float32).tiny
+    )
 
     sample_count = max(math.ceil(num_experts * SAMPLE_FRACTION), 1)
     metadata["expert1_balance_top"] = expert1_hist[:sample_count].sum()
@@ -355,8 +408,15 @@ def top2gating(
     if has_tutel:
         locations1_s = torch.sum(locations1 * mask1_, dim=1)
         locations2_s = torch.sum(locations2 * mask2_, dim=1)
-        return l_aux, metadata, capacity, num_experts, \
-            [indices1_s, indices2_s], [locations1_s, locations2_s], [gates1_s, gates2_s]
+        return (
+            l_aux,
+            metadata,
+            capacity,
+            num_experts,
+            [indices1_s, indices2_s],
+            [locations1_s, locations2_s],
+            [gates1_s, gates2_s],
+        )
 
     # Store the capacity location for each token
     locations1_s = torch.sum(locations1 * mask1, dim=1)
@@ -369,11 +429,13 @@ def top2gating(
     locations2_sc = one_hot(locations2_s, num_classes=capacity, unsqueeze_indices=True)
     combine1_sec = torch.bmm(
         # einsum("se,sc->sec")
-        gates1.unsqueeze(-1), locations1_sc.to(gates1.dtype).unsqueeze(1)
+        gates1.unsqueeze(-1),
+        locations1_sc.to(gates1.dtype).unsqueeze(1),
     )
     combine2_sec = torch.bmm(
         # einsum("se,sc->sec")
-        gates2.unsqueeze(-1), locations2_sc.to(gates2.dtype).unsqueeze(1)
+        gates2.unsqueeze(-1),
+        locations2_sc.to(gates2.dtype).unsqueeze(1),
     )
     combine_weights = combine1_sec + combine2_sec
     dispatch_mask = combine_weights.bool()
@@ -406,7 +468,7 @@ class Top2Gate(torch.nn.Module):
         model_dim: int,
         num_experts: int,
         use_fp32=False,
-        second_expert_policy='sampling',
+        second_expert_policy="sampling",
         normalize_gate_prob_before_dropping=False,
         moe_eval_capacity_token_fraction=0.25,
         batch_prioritized_routing=False,

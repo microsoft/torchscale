@@ -2,22 +2,23 @@
 # Licensed under The MIT License [see LICENSE for details]
 
 import math
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from fairscale.nn import checkpoint_wrapper, wrap
 from apex.normalization import FusedLayerNorm as LayerNorm
+from fairscale.nn import checkpoint_wrapper, wrap
+
+from torchscale.architecture.utils import init_bert_params
+from torchscale.component.droppath import DropPath
 from torchscale.component.feedforward_network import FeedForwardNetwork, make_experts
 from torchscale.component.multihead_attention import MultiheadAttention
-from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
-from torchscale.component.xmoe.moe_layer import MOELayer
-from torchscale.component.droppath import DropPath
-from torchscale.architecture.utils import init_bert_params
 from torchscale.component.relative_position_bias import RelativePositionBias
+from torchscale.component.xmoe.moe_layer import MOELayer
+from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
 
 
 class DecoderLayer(nn.Module):
-
     def __init__(
         self,
         args,
@@ -31,7 +32,9 @@ class DecoderLayer(nn.Module):
         self.dropout_module = torch.nn.Dropout(args.dropout, inplace=True)
 
         if args.drop_path_rate > 0:
-            drop_path_prob = np.linspace(0, args.drop_path_rate, args.decoder_layers)[depth]
+            drop_path_prob = np.linspace(0, args.drop_path_rate, args.decoder_layers)[
+                depth
+            ]
             self.drop_path = DropPath(drop_path_prob)
         else:
             self.drop_path = None
@@ -206,7 +209,6 @@ class DecoderLayer(nn.Module):
 
 
 class Decoder(nn.Module):
-
     def __init__(
         self,
         args,
@@ -228,7 +230,11 @@ class Decoder(nn.Module):
         self.embed_tokens = embed_tokens
         self.embed_positions = embed_positions
 
-        if output_projection is None and not args.no_output_layer and args.vocab_size > 0:
+        if (
+            output_projection is None
+            and not args.no_output_layer
+            and args.vocab_size > 0
+        ):
             self.output_projection = self.build_output_projection(args)
         else:
             self.output_projection = output_projection
@@ -286,7 +292,12 @@ class Decoder(nn.Module):
             else:
                 init_scale = math.pow(8.0 * args.decoder_layers, 0.25)
             for name, p in self.named_parameters():
-                if 'fc1' in name or 'fc2' in name or 'out_proj' in name or 'v_proj' in name:
+                if (
+                    "fc1" in name
+                    or "fc2" in name
+                    or "out_proj" in name
+                    or "v_proj" in name
+                ):
                     p.data.div_(init_scale)
 
         if args.subln:
@@ -295,9 +306,14 @@ class Decoder(nn.Module):
             else:
                 init_scale = math.sqrt(math.log(args.decoder_layers * 2))
             for name, p in self.named_parameters():
-                if 'encoder_attn' in name:
+                if "encoder_attn" in name:
                     continue
-                if 'fc1' in name or 'fc2' in name or 'out_proj' in name or 'v_proj' in name:
+                if (
+                    "fc1" in name
+                    or "fc2" in name
+                    or "out_proj" in name
+                    or "v_proj" in name
+                ):
                     p.data.mul_(init_scale)
 
     def build_output_projection(
@@ -316,16 +332,12 @@ class Decoder(nn.Module):
                 args.decoder_embed_dim, args.vocab_size, bias=False
             )
             torch.nn.init.normal_(
-                output_projection.weight, mean=0, std=args.decoder_embed_dim ** -0.5
+                output_projection.weight, mean=0, std=args.decoder_embed_dim**-0.5
             )
         return output_projection
 
     def build_decoder_layer(
-        self,
-        args,
-        depth,
-        is_moe_layer=False,
-        is_encoder_decoder=False
+        self, args, depth, is_moe_layer=False, is_encoder_decoder=False
     ):
         layer = DecoderLayer(
             args,
@@ -347,7 +359,9 @@ class Decoder(nn.Module):
     ):
         positions = None
         if self.embed_positions is not None:
-            positions = self.embed_positions(tokens, incremental_state=incremental_state)
+            positions = self.embed_positions(
+                tokens, incremental_state=incremental_state
+            )
 
         if incremental_state is not None:
             tokens = tokens[:, -1:]
@@ -381,7 +395,9 @@ class Decoder(nn.Module):
         **kwargs
     ):
         # embed tokens and positions
-        x, _ = self.forward_embedding(prev_output_tokens, token_embeddings, incremental_state)
+        x, _ = self.forward_embedding(
+            prev_output_tokens, token_embeddings, incremental_state
+        )
         x = x.transpose(0, 1)
 
         # relative postion
@@ -389,9 +405,7 @@ class Decoder(nn.Module):
         slen = prev_output_tokens.size(1)
         if self.self_attn_relative_position is not None:
             self_attn_rel_pos_bias = self.self_attn_relative_position(
-                batch_size=x.size(1),
-                qlen=slen,
-                klen=slen
+                batch_size=x.size(1), qlen=slen, klen=slen
             )
             if incremental_state is not None:
                 self_attn_rel_pos_bias = self_attn_rel_pos_bias[:, -1:, :]
@@ -416,7 +430,11 @@ class Decoder(nn.Module):
         for idx, layer in enumerate(self.layers):
             if incremental_state is None:
                 self_attn_mask = torch.triu(
-                    torch.zeros([x.size(0), x.size(0)]).float().fill_(float("-inf")).type_as(x), 1
+                    torch.zeros([x.size(0), x.size(0)])
+                    .float()
+                    .fill_(float("-inf"))
+                    .type_as(x),
+                    1,
                 )
             else:
                 self_attn_mask = None
@@ -426,7 +444,9 @@ class Decoder(nn.Module):
             x, layer_attn, _, l_aux_i = layer(
                 x,
                 encoder_out["encoder_out"] if encoder_out is not None else None,
-                encoder_out["encoder_padding_mask"] if encoder_out is not None else None,
+                encoder_out["encoder_padding_mask"]
+                if encoder_out is not None
+                else None,
                 incremental_state[idx] if incremental_state is not None else None,
                 self_attn_mask=self_attn_mask,
                 self_attn_padding_mask=self_attn_padding_mask,
@@ -444,7 +464,11 @@ class Decoder(nn.Module):
         if not features_only:
             x = self.output_layer(x)
 
-        return x, {"inner_states": inner_states, "l_aux": l_aux, "attn": [layer_attn.mean(dim=0)]}
+        return x, {
+            "inner_states": inner_states,
+            "l_aux": l_aux,
+            "attn": [layer_attn.mean(dim=0)],
+        }
 
     def output_layer(self, features):
         return self.output_projection(features)

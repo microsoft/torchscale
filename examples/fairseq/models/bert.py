@@ -2,24 +2,24 @@
 # Licensed under The MIT License [see LICENSE for details]
 
 import logging
-from typing import Optional
 from dataclasses import dataclass, field
+from typing import Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from fairseq import utils
-from fairseq.models import BaseFairseqModel, register_model, register_model_architecture
-from fairseq.dataclass import ChoiceEnum, FairseqDataclass
-from fairseq.models.transformer import (
-    DEFAULT_MIN_PARAMS_TO_WRAP, Embedding
-)
-from fairseq.modules import PositionalEmbedding
-from fairseq.models.squad import SQuADHead
-from omegaconf import II
-from .machine_translation import MTEncoder as Encoder
-from torchscale.architecture.config import EncoderConfig
 from apex.normalization import FusedLayerNorm as LayerNorm
+from fairseq import utils
+from fairseq.dataclass import ChoiceEnum, FairseqDataclass
+from fairseq.models import BaseFairseqModel, register_model, register_model_architecture
+from fairseq.models.squad import SQuADHead
+from fairseq.models.transformer import DEFAULT_MIN_PARAMS_TO_WRAP, Embedding
+from fairseq.modules import PositionalEmbedding
+from omegaconf import II
+
+from torchscale.architecture.config import EncoderConfig
+
+from .machine_translation import MTEncoder as Encoder
 
 DEFAULT_MAX_SOURCE_POSITIONS = 1024
 
@@ -109,7 +109,7 @@ class BertConfig(FairseqDataclass):
                 "is set to 0 (i.e., always wrap) when --checkpoint-activations or "
                 "--offload-activations are passed."
             )
-        }
+        },
     )
     max_source_positions: int = field(
         default=1024, metadata={"help": "max source positions"}
@@ -118,59 +118,41 @@ class BertConfig(FairseqDataclass):
         default="relu", metadata={"help": "activation function to use for pooler layer"}
     )
     pooler_dropout: float = field(
-        default=0.0, metadata={"help": "dropout probability in the masked_lm pooler layers"}
+        default=0.0,
+        metadata={"help": "dropout probability in the masked_lm pooler layers"},
     )
     # options from other parts of the config
     # add_bos_token: bool = II("task.add_bos_token")
     # tokens_per_sample: int = II("task.tokens_per_sample")
     tpu: bool = II("common.tpu")
-    rel_pos_buckets: int = field(
-        default=0, metadata={"help": ""}
-    )
-    max_rel_pos: int = field(
-        default=0, metadata={"help": ""}
-    )
+    rel_pos_buckets: int = field(default=0, metadata={"help": ""})
+    max_rel_pos: int = field(default=0, metadata={"help": ""})
     moe_freq: int = field(
         default=0,
-        metadata={
-            "help": "Frequency at which we insert MoE Transformer layers"
-        },
+        metadata={"help": "Frequency at which we insert MoE Transformer layers"},
     )
     moe_expert_count: int = field(
-        default=0,
-        metadata={
-            "help": "Number of experts in each MoE Layer"
-        }
+        default=0, metadata={"help": "Number of experts in each MoE Layer"}
     )
     moe_gating_use_fp32: bool = field(
         default=False,
-        metadata={
-            "help": "Use FP32 computations in MoE top2 gating function"
-        }
+        metadata={"help": "Use FP32 computations in MoE top2 gating function"},
     )
     moe_second_expert_policy: str = field(
-        default='sampling',
-        metadata={
-            "help": "policy for second expert, options: all/sampling/random"
-        }
+        default="sampling",
+        metadata={"help": "policy for second expert, options: all/sampling/random"},
     )
     moe_normalize_gate_prob_before_dropping: bool = field(
         default=False,
         metadata={
-            "help": 'whether to normalize gate probs before or after dropping experts for capacity and randomization'
-        }
+            "help": "whether to normalize gate probs before or after dropping experts for capacity and randomization"
+        },
     )
     moe_expert_ffn_dim: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": "MoE expert FFN dimension"
-        }
+        default=None, metadata={"help": "MoE expert FFN dimension"}
     )
     moe_top1_expert: Optional[bool] = field(
-        default=False,
-        metadata={
-            "help": "Use top1 gate instead of top2"
-        }
+        default=False, metadata={"help": "Use top1 gate instead of top2"}
     )
     moe_eval_capacity_token_fraction: Optional[float] = field(
         default=0.25,
@@ -179,23 +161,29 @@ class BertConfig(FairseqDataclass):
                 "Default: 0.25, Fraction of tokens as capacity during validation, "
                 "if set to negative, use same as training. range: (0.0, 1.0]."
             )
-        }
+        },
     )
     moe_normalize_expert_grad: Optional[str] = field(
-        default='world_size',
+        default="world_size",
         metadata={
             "help": "Divide expert gradients by (1) 'world_size' (2) 'sqrt_world_size'"
-        }
+        },
     )
     record_a2a_perf_stats: Optional[bool] = field(
-        default=False, metadata={"help": "records all to all perf stats during distributed training"}
+        default=False,
+        metadata={"help": "records all to all perf stats during distributed training"},
     )
     dummy_a2a: Optional[bool] = field(
-        default=False, metadata={
-            "help": "By passes all to all during distributed training by returning the input buffer as output"}
+        default=False,
+        metadata={
+            "help": "By passes all to all during distributed training by returning the input buffer as output"
+        },
     )
     moe_batch_prioritized_routing: Optional[bool] = field(
-        default=False, metadata={"help": "if true orders token by the gate prob before capacity dropping."}
+        default=False,
+        metadata={
+            "help": "if true orders token by the gate prob before capacity dropping."
+        },
     )
     ddp_rank: int = II("distributed_training.distributed_rank")
     deepnorm: Optional[bool] = field(
@@ -208,7 +196,6 @@ class BertConfig(FairseqDataclass):
 
 @register_model("mlm", dataclass=BertConfig)
 class BertModel(BaseFairseqModel):
-
     def __init__(self, args, encoder):
         super().__init__()
         self.args = args
@@ -240,7 +227,11 @@ class BertModel(BaseFairseqModel):
         )
 
         lm_head = cls.build_lm_head(
-            args, args.encoder_embed_dim, len(task.dictionary), args.activation_fn, weight=embed_tokens.weight
+            args,
+            args.encoder_embed_dim,
+            len(task.dictionary),
+            args.activation_fn,
+            weight=embed_tokens.weight,
         )
 
         config = EncoderConfig()
@@ -269,7 +260,9 @@ class BertModel(BaseFairseqModel):
     def output_layer(self, features, masked_tokens=None):
         return self.encoder.output_projection(features, masked_tokens=masked_tokens)
 
-    def register_classification_head(self, name, num_classes=None, inner_dim=None, **kwargs):
+    def register_classification_head(
+        self, name, num_classes=None, inner_dim=None, **kwargs
+    ):
         """Register a classification head."""
         if name in self.classification_heads:
             prev_num_classes = self.classification_heads[name].out_proj.out_features
@@ -277,7 +270,7 @@ class BertModel(BaseFairseqModel):
             if num_classes != prev_num_classes or inner_dim != prev_inner_dim:
                 logger.warning(
                     're-registering head "{}" with num_classes {} (prev: {}) '
-                    'and inner_dim {} (prev: {})'.format(
+                    "and inner_dim {} (prev: {})".format(
                         name, num_classes, prev_num_classes, inner_dim, prev_inner_dim
                     )
                 )
@@ -295,42 +288,51 @@ class BertModel(BaseFairseqModel):
         )
 
     def upgrade_state_dict_named(self, state_dict, name):
-        prefix = name + '.' if name != '' else ''
+        prefix = name + "." if name != "" else ""
 
         # upgrade children modules
         super().upgrade_state_dict_named(state_dict, name)
 
         # Handle new classification heads present in the state dict.
         current_head_names = (
-            [] if not hasattr(self, 'classification_heads')
+            []
+            if not hasattr(self, "classification_heads")
             else self.classification_heads.keys()
         )
         keys_to_delete = []
         for k in state_dict.keys():
-            if not k.startswith(prefix + 'classification_heads.'):
+            if not k.startswith(prefix + "classification_heads."):
                 continue
 
-            head_name = k[len(prefix + 'classification_heads.'):].split('.')[0]
-            num_classes = state_dict[prefix + 'classification_heads.' + head_name + '.out_proj.weight'].size(0)
-            inner_dim = state_dict[prefix + 'classification_heads.' + head_name + '.dense.weight'].size(0)
+            head_name = k[len(prefix + "classification_heads.") :].split(".")[0]  # noqa: E203
+            num_classes = state_dict[
+                prefix + "classification_heads." + head_name + ".out_proj.weight"
+            ].size(0)
+            inner_dim = state_dict[
+                prefix + "classification_heads." + head_name + ".dense.weight"
+            ].size(0)
 
-            if getattr(self.args, 'load_checkpoint_heads', False):
+            if getattr(self.args, "load_checkpoint_heads", False):
                 if head_name not in current_head_names:
                     self.register_classification_head(head_name, num_classes, inner_dim)
             else:
                 if head_name not in current_head_names:
                     logger.warning(
-                        'deleting classification head ({}) from checkpoint '
-                        'not present in current model: {}'.format(head_name, k)
+                        "deleting classification head ({}) from checkpoint "
+                        "not present in current model: {}".format(head_name, k)
                     )
                     keys_to_delete.append(k)
                 elif (
-                    num_classes != self.classification_heads[head_name].out_proj.out_features
-                    or inner_dim != self.classification_heads[head_name].dense.out_features
+                    num_classes
+                    != self.classification_heads[head_name].out_proj.out_features
+                    or inner_dim
+                    != self.classification_heads[head_name].dense.out_features
                 ):
                     logger.warning(
-                        'deleting classification head ({}) from checkpoint '
-                        'with different dimensions than current model: {}'.format(head_name, k)
+                        "deleting classification head ({}) from checkpoint "
+                        "with different dimensions than current model: {}".format(
+                            head_name, k
+                        )
                     )
                     keys_to_delete.append(k)
         for k in keys_to_delete:
@@ -338,12 +340,12 @@ class BertModel(BaseFairseqModel):
 
         # Copy any newly-added classification heads into the state dict
         # with their current weights.
-        if hasattr(self, 'classification_heads'):
+        if hasattr(self, "classification_heads"):
             cur_state = self.classification_heads.state_dict()
             for k, v in cur_state.items():
-                if prefix + 'classification_heads.' + k not in state_dict:
-                    logger.info('Overwriting ' + prefix + 'classification_heads.' + k)
-                    state_dict[prefix + 'classification_heads.' + k] = v
+                if prefix + "classification_heads." + k not in state_dict:
+                    logger.info("Overwriting " + prefix + "classification_heads." + k)
+                    state_dict[prefix + "classification_heads." + k] = v
 
     def forward(
         self,
@@ -354,7 +356,9 @@ class BertModel(BaseFairseqModel):
         masked_tokens=None,
         **kwargs
     ):
-        encoder_out = self.encoder(src_tokens, features_only=True, return_all_hiddens=return_all_hiddens)
+        encoder_out = self.encoder(
+            src_tokens, features_only=True, return_all_hiddens=return_all_hiddens
+        )
         x, extra = encoder_out["encoder_out"], encoder_out
         x = x.transpose(0, 1)
 
@@ -455,7 +459,7 @@ def base_unilm_architecture(args):
     args.encoder_input_dim = getattr(args, "encoder_input_dim", args.encoder_embed_dim)
 
     # Model training is not stable without this
-    args.encoder_normalize_before = getattr(args, 'encoder_normalize_before', False)
+    args.encoder_normalize_before = getattr(args, "encoder_normalize_before", False)
     args.no_encoder_final_norm = getattr(args, "no_encoder_final_norm", False)
 
     args.no_scale_embedding = getattr(args, "no_scale_embedding", True)

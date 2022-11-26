@@ -2,15 +2,16 @@
 # Licensed under The MIT License [see LICENSE for details]
 
 import math
+
 import torch
-from torch import nn
 import torch.nn.functional as F
 from apex.normalization import FusedLayerNorm as LayerNorm
+from torch import nn
+
 from .multiway_network import MultiwayWrapper
 
 
 class MultiheadAttention(nn.Module):
-
     def __init__(
         self,
         args,
@@ -25,7 +26,7 @@ class MultiheadAttention(nn.Module):
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.head_dim = embed_dim // num_heads
-        self.scaling = self.head_dim ** -0.5
+        self.scaling = self.head_dim**-0.5
 
         self.self_attention = self_attention
         self.encoder_decoder_attention = encoder_decoder_attention
@@ -34,8 +35,14 @@ class MultiheadAttention(nn.Module):
         self.k_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim, bias=True))
         self.v_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim, bias=True))
         self.q_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim, bias=True))
-        self.out_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim, bias=True))
-        self.inner_attn_ln = MultiwayWrapper(args, LayerNorm(self.embed_dim)) if subln and self.self_attention else None
+        self.out_proj = MultiwayWrapper(
+            args, nn.Linear(embed_dim, embed_dim, bias=True)
+        )
+        self.inner_attn_ln = (
+            MultiwayWrapper(args, LayerNorm(self.embed_dim))
+            if subln and self.self_attention
+            else None
+        )
         self.dropout_module = torch.nn.Dropout(dropout, inplace=True)
 
     def reset_parameters(self):
@@ -76,12 +83,20 @@ class MultiheadAttention(nn.Module):
 
         if incremental_state is not None:
             if "prev_key" in incremental_state:
-                prev_key = incremental_state["prev_key"].view(bsz * self.num_heads, -1, self.head_dim)
-                prev_value = incremental_state["prev_value"].view(bsz * self.num_heads, -1, self.head_dim)
+                prev_key = incremental_state["prev_key"].view(
+                    bsz * self.num_heads, -1, self.head_dim
+                )
+                prev_value = incremental_state["prev_value"].view(
+                    bsz * self.num_heads, -1, self.head_dim
+                )
                 k = torch.cat([prev_key, k], dim=1)
                 v = torch.cat([prev_value, v], dim=1)
-            incremental_state["prev_key"] = k.view(bsz, self.num_heads, -1, self.head_dim)
-            incremental_state["prev_value"] = v.view(bsz, self.num_heads, -1, self.head_dim)
+            incremental_state["prev_key"] = k.view(
+                bsz, self.num_heads, -1, self.head_dim
+            )
+            incremental_state["prev_value"] = v.view(
+                bsz, self.num_heads, -1, self.head_dim
+            )
             src_len = k.size(1)
 
         attn_weights = torch.bmm(q, k.transpose(1, 2))
@@ -103,7 +118,9 @@ class MultiheadAttention(nn.Module):
             rel_pos = rel_pos.view(attn_weights.size())
             attn_weights = attn_weights + rel_pos
 
-        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).type_as(attn_weights)
+        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).type_as(
+            attn_weights
+        )
         attn_probs = self.dropout_module(attn_weights)
 
         attn = torch.bmm(attn_probs, v)

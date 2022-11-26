@@ -1,23 +1,25 @@
 # Copyright (c) 2022 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 
+import json
+import logging
+import os
+from argparse import Namespace
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 from dataclasses import dataclass, field
-import logging
-import os
-from argparse import Namespace
-import json
-from omegaconf import MISSING, II
 
+import sentencepiece as spm
 from fairseq import utils
 from fairseq.data import Dictionary
+from fairseq.dataclass import ChoiceEnum, FairseqDataclass
 from fairseq.tasks import FairseqTask, register_task
+from omegaconf import II, MISSING
+
 from .data.mlm_loader import MLMLoader
-from fairseq.dataclass import FairseqDataclass, ChoiceEnum
-import sentencepiece as spm
 
 logger = logging.getLogger(__name__)
 
@@ -109,21 +111,16 @@ class PretrainingConfig(FairseqDataclass):
     required_batch_size_multiple: int = II("dataset.required_batch_size_multiple")
     spm_model: str = field(
         default="",
-        metadata={
-            "help": "sentencepice model to tokenize the data"
-        },
+        metadata={"help": "sentencepice model to tokenize the data"},
     )
     dict_file: str = field(
         default="",
-        metadata={
-            "help": ""
-        },
+        metadata={"help": ""},
     )
 
 
 @register_task("pretraining", dataclass=PretrainingConfig)
 class PLMTask(FairseqTask):
-
     def __init__(self, cfg, dictionary, tokenizer):
         super().__init__(cfg)
         self.cfg = cfg
@@ -156,9 +153,9 @@ class PLMTask(FairseqTask):
 
     def load_dataset(self, split, epoch=1, combine=False, **kwargs):
         self.datasets[split] = {
-            'data': json.load(open(f'{self.cfg.data}/json/{split}.json')),
-            'data_dir': self.cfg.data,
-            'shuffle': True if split == 'train' else False,
+            "data": json.load(open(f"{self.cfg.data}/json/{split}.json")),
+            "data_dir": self.cfg.data,
+            "shuffle": True if split == "train" else False,
         }
         self.datasets[split] = Namespace(**self.datasets[split])
 
@@ -185,18 +182,18 @@ class PLMTask(FairseqTask):
         disable_iterator_cache=False,
     ):
         return MLMLoader(
-                self.cfg,
-                dataset,
-                self.dictionary,
-                self.tokenizer,
-                max_tokens=max_tokens,
-                max_sentences=max_sentences,
-                max_positions=max_positions,
-                ignore_invalid_inputs=ignore_invalid_inputs,
-                required_batch_size_multiple=required_batch_size_multiple,
-                seed=seed,
-                num_shards=num_shards,
-                shard_id=shard_id,
+            self.cfg,
+            dataset,
+            self.dictionary,
+            self.tokenizer,
+            max_tokens=max_tokens,
+            max_sentences=max_sentences,
+            max_positions=max_positions,
+            ignore_invalid_inputs=ignore_invalid_inputs,
+            required_batch_size_multiple=required_batch_size_multiple,
+            seed=seed,
+            num_shards=num_shards,
+            shard_id=shard_id,
         )
 
     @property

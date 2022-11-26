@@ -9,10 +9,9 @@
 import logging
 from dataclasses import dataclass, field
 from typing import Optional
-import torch
 
-from fairseq import utils
-from fairseq import distributed_utils
+import torch
+from fairseq import distributed_utils, utils
 from fairseq.dataclass import ChoiceEnum, FairseqDataclass
 from fairseq.models import (
     FairseqIncrementalDecoder,
@@ -20,13 +19,12 @@ from fairseq.models import (
     register_model,
     register_model_architecture,
 )
-from fairseq.models.transformer import (
-    DEFAULT_MIN_PARAMS_TO_WRAP, Embedding,
-)
+from fairseq.models.transformer import DEFAULT_MIN_PARAMS_TO_WRAP, Embedding
 from fairseq.modules import PositionalEmbedding
-from torchscale.architecture.decoder import Decoder
-from torchscale.architecture.config import DecoderConfig
 from omegaconf import II
+
+from torchscale.architecture.config import DecoderConfig
+from torchscale.architecture.decoder import Decoder
 
 DEFAULT_MAX_TARGET_POSITIONS = 1024
 logger = logging.getLogger(__name__)
@@ -104,49 +102,34 @@ class LanguageConfig(FairseqDataclass):
                 "is set to 0 (i.e., always wrap) when --checkpoint-activations or "
                 "--offload-activations are passed."
             )
-        }
+        },
     )
     moe_freq: int = field(
         default=0,
-        metadata={
-            "help": "Frequency at which we insert MoE Transformer layers"
-        },
+        metadata={"help": "Frequency at which we insert MoE Transformer layers"},
     )
     moe_expert_count: int = field(
-        default=0,
-        metadata={
-            "help": "Number of experts in each MoE Layer"
-        }
+        default=0, metadata={"help": "Number of experts in each MoE Layer"}
     )
     moe_gating_use_fp32: bool = field(
         default=False,
-        metadata={
-            "help": "Use FP32 computations in MoE top2 gating function"
-        }
+        metadata={"help": "Use FP32 computations in MoE top2 gating function"},
     )
     moe_second_expert_policy: str = field(
-        default='sampling',
-        metadata={
-            "help": "policy for second expert, options: all/sampling/random"
-        }
+        default="sampling",
+        metadata={"help": "policy for second expert, options: all/sampling/random"},
     )
     moe_normalize_gate_prob_before_dropping: bool = field(
         default=False,
         metadata={
-            "help": 'whether to normalize gate probs before or after dropping experts for capacity and randomization'
-        }
+            "help": "whether to normalize gate probs before or after dropping experts for capacity and randomization"
+        },
     )
     moe_expert_ffn_dim: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": "MoE expert FFN dimension"
-        }
+        default=None, metadata={"help": "MoE expert FFN dimension"}
     )
     moe_top1_expert: Optional[bool] = field(
-        default=False,
-        metadata={
-            "help": "Use top1 gate instead of top2"
-        }
+        default=False, metadata={"help": "Use top1 gate instead of top2"}
     )
     moe_eval_capacity_token_fraction: Optional[float] = field(
         default=0.25,
@@ -155,23 +138,29 @@ class LanguageConfig(FairseqDataclass):
                 "Default: 0.25, Fraction of tokens as capacity during validation, "
                 "if set to negative, use same as training. range: (0.0, 1.0]."
             )
-        }
+        },
     )
     moe_normalize_expert_grad: Optional[str] = field(
-        default='world_size',
+        default="world_size",
         metadata={
             "help": "Divide expert gradients by (1) 'world_size' (2) 'sqrt_world_size'"
-        }
+        },
     )
     record_a2a_perf_stats: Optional[bool] = field(
-        default=False, metadata={"help": "records all to all perf stats during distributed training"}
+        default=False,
+        metadata={"help": "records all to all perf stats during distributed training"},
     )
     dummy_a2a: Optional[bool] = field(
-        default=False, metadata={
-            "help": "By passes all to all during distributed training by returning the input buffer as output"}
+        default=False,
+        metadata={
+            "help": "By passes all to all during distributed training by returning the input buffer as output"
+        },
     )
     moe_batch_prioritized_routing: Optional[bool] = field(
-        default=False, metadata={"help": "if true orders token by the gate prob before capacity dropping."}
+        default=False,
+        metadata={
+            "help": "if true orders token by the gate prob before capacity dropping."
+        },
     )
     use_xmoe: Optional[bool] = field(
         default=False,
@@ -205,7 +194,6 @@ class LanguageConfig(FairseqDataclass):
 
 @register_model("lm", dataclass=LanguageConfig)
 class LanguageModel(FairseqLanguageModel):
-
     def __init__(self, args, decoder):
         self.args = args
         super().__init__(decoder)
@@ -245,19 +233,17 @@ class LanguageModel(FairseqLanguageModel):
                 args.decoder_embed_dim, len(task.dictionary), bias=False
             )
             torch.nn.init.normal_(
-                output_projection.weight, mean=0, std=args.decoder_embed_dim ** -0.5
+                output_projection.weight, mean=0, std=args.decoder_embed_dim**-0.5
             )
 
-        if (
-            getattr(args, 'moe_freq', 0) > 0
-            and (
-                getattr(args, 'fp16', False)
-                and not getattr(args, 'memory_efficient_fp16', False)
-                and getattr(args, 'ddp_backend', None) != "fully_sharded"
-            )
+        if getattr(args, "moe_freq", 0) > 0 and (
+            getattr(args, "fp16", False)
+            and not getattr(args, "memory_efficient_fp16", False)
+            and getattr(args, "ddp_backend", None) != "fully_sharded"
         ):
-            assert args.fp16_no_flatten_grads, \
-                   "If training moe models, set --fp16-no-flatten-grads to calculate correct gradnorm"
+            assert (
+                args.fp16_no_flatten_grads
+            ), "If training moe models, set --fp16-no-flatten-grads to calculate correct gradnorm"
 
         args.ddp_rank = distributed_utils.get_data_parallel_rank()
 
@@ -281,7 +267,6 @@ class LanguageModel(FairseqLanguageModel):
 
 
 class LMDecoder(Decoder, FairseqIncrementalDecoder):
-
     def forward(self, src_tokens, **kwargs):
         self_attn_padding_mask = src_tokens.eq(self.dictionary.pad())
         return super().forward(src_tokens, self_attn_padding_mask, **kwargs)

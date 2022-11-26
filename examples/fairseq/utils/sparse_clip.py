@@ -1,17 +1,21 @@
 # Copyright (c) 2022 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 
-import torch
-import warnings
-from fairseq.utils import multi_tensor_l2norm_available, multi_tensor_total_norm
-import torch.distributed as dist
 import math
+import warnings
+
+import torch
+import torch.distributed as dist
+from fairseq.utils import multi_tensor_l2norm_available, multi_tensor_total_norm
 
 
 @torch.no_grad()
-def clip_grad_norm_(params, max_norm, moe_expert_count, aggregate_norm_fn=None) -> torch.Tensor:
+def clip_grad_norm_(
+    params, max_norm, moe_expert_count, aggregate_norm_fn=None
+) -> torch.Tensor:
     def grad_exists(p):
         return p is not None and getattr(p, "grad", None) is not None
+
     if isinstance(params, torch.Tensor):
         params = [params]
     params = list(params)
@@ -59,7 +63,9 @@ def clip_grad_norm_(params, max_norm, moe_expert_count, aggregate_norm_fn=None) 
     for split_grads in [expert_grads, sharded_grads]:
         if len(split_grads) == 0:
             continue
-        split_norm = torch.norm(torch.stack([torch.norm(g, p=2, dtype=torch.float32) for g in split_grads]))
+        split_norm = torch.norm(
+            torch.stack([torch.norm(g, p=2, dtype=torch.float32) for g in split_grads])
+        )
         if dist.is_initialized():
             split_norm.pow_(2)
             dist.all_reduce(split_norm)

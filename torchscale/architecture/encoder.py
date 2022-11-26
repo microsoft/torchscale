@@ -2,30 +2,25 @@
 # Licensed under The MIT License [see LICENSE for details]
 
 import math
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from fairscale.nn import checkpoint_wrapper, wrap
 from apex.normalization import FusedLayerNorm as LayerNorm
+from fairscale.nn import checkpoint_wrapper, wrap
+
+from torchscale.architecture.utils import init_bert_params
+from torchscale.component.droppath import DropPath
 from torchscale.component.feedforward_network import FeedForwardNetwork, make_experts
 from torchscale.component.multihead_attention import MultiheadAttention
-from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
-from torchscale.component.xmoe.moe_layer import MOELayer
-from torchscale.component.multiway_network import set_split_position, MultiwayWrapper
-from torchscale.component.droppath import DropPath
-from torchscale.architecture.utils import init_bert_params
+from torchscale.component.multiway_network import MultiwayWrapper, set_split_position
 from torchscale.component.relative_position_bias import RelativePositionBias
+from torchscale.component.xmoe.moe_layer import MOELayer
+from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
 
 
 class EncoderLayer(nn.Module):
-
-    def __init__(
-        self,
-        args,
-        depth,
-        is_moe_layer=False,
-        is_encoder_decoder=False
-    ):
+    def __init__(self, args, depth, is_moe_layer=False, is_encoder_decoder=False):
         super().__init__()
         self.args = args
         self.embed_dim = args.encoder_embed_dim
@@ -34,7 +29,9 @@ class EncoderLayer(nn.Module):
         self.dropout_module = torch.nn.Dropout(args.dropout, inplace=True)
 
         if args.drop_path_rate > 0:
-            drop_path_prob = np.linspace(0, args.drop_path_rate, args.encoder_layers)[depth]
+            drop_path_prob = np.linspace(0, args.drop_path_rate, args.encoder_layers)[
+                depth
+            ]
             self.drop_path = DropPath(drop_path_prob)
         else:
             self.drop_path = None
@@ -49,7 +46,7 @@ class EncoderLayer(nn.Module):
                 self.build_ffn(
                     self.embed_dim,
                     self.args,
-                )
+                ),
             )
         else:
             assert not self.args.multiway
@@ -77,7 +74,12 @@ class EncoderLayer(nn.Module):
 
         if args.deepnorm:
             if is_encoder_decoder:
-                self.alpha = math.pow(math.pow(args.encoder_layers, 4) * args.decoder_layers, 0.0625) * 0.81
+                self.alpha = (
+                    math.pow(
+                        math.pow(args.encoder_layers, 4) * args.decoder_layers, 0.0625
+                    )
+                    * 0.81
+                )
             else:
                 self.alpha = math.pow(2.0 * args.encoder_layers, 0.25)
         else:
@@ -107,13 +109,7 @@ class EncoderLayer(nn.Module):
     def residual_connection(self, x, residual):
         return residual * self.alpha + x
 
-    def forward(
-        self,
-        x,
-        encoder_padding_mask,
-        attn_mask=None,
-        rel_pos=None
-    ):
+    def forward(self, x, encoder_padding_mask, attn_mask=None, rel_pos=None):
         if attn_mask is not None:
             attn_mask = attn_mask.masked_fill(attn_mask.to(torch.bool), -1e8)
 
@@ -158,7 +154,6 @@ class EncoderLayer(nn.Module):
 
 
 class Encoder(nn.Module):
-
     def __init__(
         self,
         args,
@@ -179,13 +174,20 @@ class Encoder(nn.Module):
         self.embed_tokens = embed_tokens
         self.embed_positions = embed_positions
 
-        if output_projection is None and not is_encoder_decoder and not args.no_output_layer and args.vocab_size > 0:
+        if (
+            output_projection is None
+            and not is_encoder_decoder
+            and not args.no_output_layer
+            and args.vocab_size > 0
+        ):
             self.output_projection = self.build_output_projection(args)
         else:
             self.output_projection = output_projection
 
         if args.layernorm_embedding:
-            self.layernorm_embedding = MultiwayWrapper(args, LayerNorm(embed_dim), dim=1)
+            self.layernorm_embedding = MultiwayWrapper(
+                args, LayerNorm(embed_dim), dim=1
+            )
         else:
             self.layernorm_embedding = None
 
@@ -199,7 +201,7 @@ class Encoder(nn.Module):
                     args,
                     depth=i,
                     is_moe_layer=is_moe_layer,
-                    is_encoder_decoder=is_encoder_decoder
+                    is_encoder_decoder=is_encoder_decoder,
                 )
             )
         self.num_layers = len(self.layers)
@@ -223,20 +225,39 @@ class Encoder(nn.Module):
 
         if args.deepnorm:
             if is_encoder_decoder:
-                init_scale = math.pow(math.pow(args.encoder_layers, 4) * args.decoder_layers, 0.0625) / 1.15
+                init_scale = (
+                    math.pow(
+                        math.pow(args.encoder_layers, 4) * args.decoder_layers, 0.0625
+                    )
+                    / 1.15
+                )
             else:
                 init_scale = math.pow(8.0 * args.encoder_layers, 0.25)
             for name, p in self.named_parameters():
-                if 'fc1' in name or 'fc2' in name or 'out_proj' in name or 'v_proj' in name:
+                if (
+                    "fc1" in name
+                    or "fc2" in name
+                    or "out_proj" in name
+                    or "v_proj" in name
+                ):
                     p.data.div_(init_scale)
 
         if args.subln:
             if is_encoder_decoder:
-                init_scale = math.sqrt(math.log(3 * args.decoder_layers) * math.log(2 * args.encoder_layers) / 3)
+                init_scale = math.sqrt(
+                    math.log(3 * args.decoder_layers)
+                    * math.log(2 * args.encoder_layers)
+                    / 3
+                )
             else:
                 init_scale = math.sqrt(math.log(args.encoder_layers * 2))
             for name, p in self.named_parameters():
-                if 'fc1' in name or 'fc2' in name or 'out_proj' in name or 'v_proj' in name:
+                if (
+                    "fc1" in name
+                    or "fc2" in name
+                    or "out_proj" in name
+                    or "v_proj" in name
+                ):
                     p.data.mul_(init_scale)
 
     def build_output_projection(
@@ -244,7 +265,7 @@ class Encoder(nn.Module):
         args,
     ):
         if args.share_encoder_input_output_embed:
-            assert args.encoder_embedding_type == 'language'
+            assert args.encoder_embedding_type == "language"
             output_projection = torch.nn.Linear(
                 self.embed_tokens.weight.shape[1],
                 self.embed_tokens.weight.shape[0],
@@ -256,22 +277,18 @@ class Encoder(nn.Module):
                 args.encoder_embed_dim, args.vocab_size, bias=False
             )
             torch.nn.init.normal_(
-                output_projection.weight, mean=0, std=args.encoder_embed_dim ** -0.5
+                output_projection.weight, mean=0, std=args.encoder_embed_dim**-0.5
             )
         return output_projection
 
     def build_encoder_layer(
-        self,
-        args,
-        depth,
-        is_moe_layer=False,
-        is_encoder_decoder=False
+        self, args, depth, is_moe_layer=False, is_encoder_decoder=False
     ):
         layer = EncoderLayer(
             args,
             depth,
             is_moe_layer=is_moe_layer,
-            is_encoder_decoder=is_encoder_decoder
+            is_encoder_decoder=is_encoder_decoder,
         )
         if args.checkpoint_activations:
             layer = checkpoint_wrapper(layer)
@@ -312,13 +329,12 @@ class Encoder(nn.Module):
         if encoder_padding_mask is None:
             if src_tokens is not None:
                 encoder_padding_mask = torch.zeros_like(
-                    src_tokens,
-                    device=src_tokens.device
+                    src_tokens, device=src_tokens.device
                 ).bool()
             else:
                 encoder_padding_mask = torch.zeros(
                     [token_embeddings.size(0), token_embeddings.size(1)],
-                    device=token_embeddings.device
+                    device=token_embeddings.device,
                 ).bool()
 
         if multiway_split_position is not None:
@@ -338,16 +354,13 @@ class Encoder(nn.Module):
         rel_pos_bias = None
         if self.relative_position is not None:
             rel_pos_bias = self.relative_position(
-                batch_size=x.size(1),
-                qlen=x.size(0),
-                klen=x.size(0)
+                batch_size=x.size(1), qlen=x.size(0), klen=x.size(0)
             )
 
         l_aux = []
         for layer in self.layers:
             x, l_aux_i = layer(
-                x, encoder_padding_mask=encoder_padding_mask,
-                rel_pos=rel_pos_bias
+                x, encoder_padding_mask=encoder_padding_mask, rel_pos=rel_pos_bias
             )
             if return_all_hiddens:
                 assert encoder_states is not None
