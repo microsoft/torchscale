@@ -9,7 +9,7 @@ TorchScale is a PyTorch library that allows researchers and developers to scale 
 It has the implementation of fundamental research to improve modeling generality and capability, as well as training stability and efficiency of scaling Transformers.
 
 - Stability - [**DeepNet**](https://arxiv.org/abs/2203.00555): scaling Transformers to 1,000 Layers and beyond
-- Generality - [**Foundation Transformers (Magneto)**](https://arxiv.org/abs/2210.06423)
+- Generality - [**Foundation Transformers (Magneto)**](https://arxiv.org/abs/2210.06423): towards the big convergence of model architectures across language, vision, speech, and multimodal
 - Efficiency - [**X-MoE**](https://arxiv.org/abs/2204.09179): scalable & finetunable sparse Mixture-of-Experts (MoE)
 
 ## News
