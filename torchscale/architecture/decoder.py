@@ -400,7 +400,7 @@ class Decoder(nn.Module):
         )
         x = x.transpose(0, 1)
 
-        # relative postion
+        # relative position
         self_attn_rel_pos_bias = None
         slen = prev_output_tokens.size(1)
         if self.self_attn_relative_position is not None:
