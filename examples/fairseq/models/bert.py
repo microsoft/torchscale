@@ -391,7 +391,7 @@ class ClassificationHead(nn.Module):
         x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
         x = self.dropout(x)
         x = self.dense(x)
-        x = self.activation_fn(x)
+        x = self.activation_fn(x.float()).as_type(x)
         x = self.dropout(x)
         x = self.out_proj(x)
         return x
@@ -418,7 +418,7 @@ class LMHead(nn.Module):
             features = features[masked_tokens, :]
 
         x = self.dense(features)
-        x = self.activation_fn(x)
+        x = self.activation_fn(x.float()).as_type(x)
         x = self.layer_norm(x)
         # project back to size of vocabulary with bias
         x = F.linear(x, self.weight) + self.bias
