@@ -121,7 +121,7 @@ class FeedForwardNetwork(nn.Module):
         x_shape = x.shape
         x = x.reshape(-1, x.size(-1))
         x = self.fc1(x)
-        x = self.activation_fn(x.float()).as_type(x)
+        x = self.activation_fn(x.float()).type_as(x)
         x = self.activation_dropout_module(x)
         if self.ffn_layernorm is not None:
             x = self.ffn_layernorm(x)
