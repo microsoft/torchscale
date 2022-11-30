@@ -92,11 +92,6 @@ class DecoderLayer(nn.Module):
         else:
             self.alpha = 1.0
 
-        if args.subln:
-            self.ffn_layernorm = LayerNorm(self.ffn_dim)
-        else:
-            self.ffn_layernorm = None
-
     def build_ffn(self, embed_dim, args):
         return FeedForwardNetwork(
             embed_dim,

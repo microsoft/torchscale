@@ -112,10 +112,10 @@ class DecoderConfig(object):
         self.ddp_rank = kwargs.pop("ddp_rank", 0)
 
         if self.deepnorm:
-            self.encoder_normalize_before = False
+            self.decoder_normalize_before = False
             self.subln = False
         if self.subln:
-            self.encoder_normalize_before = True
+            self.decoder_normalize_before = True
             self.deepnorm = False
         if self.use_xmoe:
             self.moe_normalize_gate_prob_before_dropping = True
