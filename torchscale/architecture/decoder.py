@@ -462,7 +462,7 @@ class Decoder(nn.Module):
         return x, {
             "inner_states": inner_states,
             "l_aux": l_aux,
-            "attn": [layer_attn.mean(dim=0)],
+            "attn": None,
         }
 
     def output_layer(self, features):
