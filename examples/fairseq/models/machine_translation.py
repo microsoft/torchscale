@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple
 
 import torch
 from fairseq import distributed_utils, utils
-from fairseq.distributed import utils as fsdp_wrap
+from fairseq.distributed import fsdp_wrap
 from fairseq.models import (
     FairseqEncoder,
     FairseqEncoderDecoderModel,
