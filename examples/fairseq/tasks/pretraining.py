@@ -180,6 +180,7 @@ class PLMTask(FairseqTask):
         epoch=1,
         data_buffer_size=0,
         disable_iterator_cache=False,
+        **kwargs,
     ):
         return MLMLoader(
             self.cfg,
