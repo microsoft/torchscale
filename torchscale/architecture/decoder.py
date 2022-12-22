@@ -260,8 +260,6 @@ class Decoder(nn.Module):
         else:
             self.layer_norm = None
 
-        self.output_projection = output_projection
-
         self.self_attn_relative_position = None
         self.cross_attn_relative_position = None
 
