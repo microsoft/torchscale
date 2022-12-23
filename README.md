@@ -10,6 +10,7 @@ It has the implementation of fundamental research to improve modeling generality
 
 - Stability - [**DeepNet**](https://arxiv.org/abs/2203.00555): scaling Transformers to 1,000 Layers and beyond
 - Generality - [**Foundation Transformers (Magneto)**](https://arxiv.org/abs/2210.06423): towards true general-purpose modeling across tasks and modalities (including language, vision, speech, and multimodal)
+- Capability - A [**Length-Extrapolatable**](https://arxiv.org/abs/2212.10554) Transformer
 - Efficiency - [**X-MoE**](https://arxiv.org/abs/2204.09179): scalable & finetunable sparse Mixture-of-Experts (MoE)
 
 ## News
