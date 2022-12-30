@@ -49,6 +49,7 @@ class EncoderConfig(object):
         self.checkpoint_activations = kwargs.pop("checkpoint_activations", False)
         self.fsdp = kwargs.pop("fsdp", False)
         self.ddp_rank = kwargs.pop("ddp_rank", 0)
+        self.xpos = kwargs.pop("xpos", False)
 
         if self.deepnorm:
             self.encoder_normalize_before = False
@@ -110,6 +111,7 @@ class DecoderConfig(object):
         self.checkpoint_activations = kwargs.pop("checkpoint_activations", False)
         self.fsdp = kwargs.pop("fsdp", False)
         self.ddp_rank = kwargs.pop("ddp_rank", 0)
+        self.xpos = kwargs.pop("xpos", False)
 
         if self.deepnorm:
             self.decoder_normalize_before = False
@@ -178,6 +180,7 @@ class EncoderDecoderConfig(object):
         self.checkpoint_activations = kwargs.pop("checkpoint_activations", False)
         self.fsdp = kwargs.pop("fsdp", False)
         self.ddp_rank = kwargs.pop("ddp_rank", 0)
+        self.xpos = kwargs.pop("xpos", False)
 
         if self.deepnorm:
             self.encoder_normalize_before = False
