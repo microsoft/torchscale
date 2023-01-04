@@ -49,7 +49,7 @@ class XPOS(nn.Module):
     def forward(self, x, offset=0, downscale=False):
         length = x.shape[1]
         min_pos = -(length + offset) // 2
-        max_pos = length + offset - min_pos
+        max_pos = length + offset + min_pos
         scale = self.scale ** torch.arange(min_pos, max_pos, 1).to(self.scale).div(self.scale_base)[:, None]
         sin, cos = fixed_pos_embedding(scale)
 

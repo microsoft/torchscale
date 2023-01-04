@@ -84,6 +84,9 @@ We also support the `Decoder` architecture and the `EncoderDecoder` architecture
   * enabled by *multiway=True*.
   * It provides a pool of Transformer's parameters used for different modalities.
 
+- [Extrapolatable position embedding (Xpos)](https://arxiv.org/abs/2212.10554)
+  * enabled by *xpos_rel_pos=True*.
+
 - [Relative position bias](https://arxiv.org/abs/1910.10683)
   * enabled by adjusting *rel_pos_buckets* and *max_rel_pos*.
 
