@@ -9,6 +9,7 @@ from apex.normalization import FusedLayerNorm as LayerNorm
 from torch import nn
 
 from .multiway_network import MultiwayWrapper
+from .xpos_relative_position import XPOS
 
 
 class MultiheadAttention(nn.Module):
@@ -44,6 +45,11 @@ class MultiheadAttention(nn.Module):
             else None
         )
         self.dropout_module = torch.nn.Dropout(dropout, inplace=True)
+        self.xpos = (
+            XPOS(self.head_dim, args.xpos_scale_base)
+            if args.xpos_rel_pos and self.self_attention
+            else None
+        )
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
@@ -98,6 +104,14 @@ class MultiheadAttention(nn.Module):
                 bsz, self.num_heads, -1, self.head_dim
             )
             src_len = k.size(1)
+
+        if self.xpos is not None:
+            if incremental_state is not None:
+                offset = src_len - 1
+            else:
+                offset = 0
+            k = self.xpos(k, offset=0, downscale=True)
+            q = self.xpos(q, offset=offset, downscale=False)
 
         attn_weights = torch.bmm(q, k.transpose(1, 2))
 

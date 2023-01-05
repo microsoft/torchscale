@@ -190,6 +190,12 @@ class LanguageConfig(FairseqDataclass):
     max_rel_pos: Optional[int] = field(
         default=0,
     )
+    xpos_rel_pos: Optional[bool] = field(
+        default=False,
+    )
+    xpos_scale_base: Optional[int] = field(
+        default=512,
+    )
 
 
 @register_model("lm", dataclass=LanguageConfig)
