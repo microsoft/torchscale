@@ -348,8 +348,6 @@ class Encoder(nn.Module):
         x, encoder_embedding = self.forward_embedding(src_tokens, token_embeddings)
         x = x * (1 - encoder_padding_mask.unsqueeze(-1).type_as(x))
 
-        x = x.transpose(0, 1)
-
         encoder_states = []
 
         if return_all_hiddens:
@@ -358,7 +356,7 @@ class Encoder(nn.Module):
         rel_pos_bias = None
         if self.relative_position is not None:
             rel_pos_bias = self.relative_position(
-                batch_size=x.size(1), qlen=x.size(0), klen=x.size(0)
+                batch_size=x.size(0), qlen=x.size(1), klen=x.size(1)
             )
 
         l_aux = []

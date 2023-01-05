@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 
-def MultiwayWrapper(args, module, dim=0):
+def MultiwayWrapper(args, module, dim=1):
     if args.multiway:
         return MultiwayNetwork(module, dim=dim)
     return module
@@ -22,7 +22,7 @@ def set_split_position(position):
 
 
 class MultiwayNetwork(nn.Module):
-    def __init__(self, module, dim=0):
+    def __init__(self, module, dim=1):
         super().__init__()
         self.dim = dim
         self.A = module

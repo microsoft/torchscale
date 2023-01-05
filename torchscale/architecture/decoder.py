@@ -189,9 +189,7 @@ class DecoderLayer(nn.Module):
             x = self.ffn(x)
             l_aux = None
         else:
-            x = x.transpose(0, 1)
             x, l_aux = self.moe_layer(x)
-            x = x.transpose(0, 1)
 
         if self.drop_path is not None:
             x = self.drop_path(x)
@@ -391,26 +389,25 @@ class Decoder(nn.Module):
         x, _ = self.forward_embedding(
             prev_output_tokens, token_embeddings, incremental_state
         )
-        x = x.transpose(0, 1)
 
         # relative position
         self_attn_rel_pos_bias = None
         slen = prev_output_tokens.size(1)
         if self.self_attn_relative_position is not None:
             self_attn_rel_pos_bias = self.self_attn_relative_position(
-                batch_size=x.size(1), qlen=slen, klen=slen
+                batch_size=x.size(0), qlen=slen, klen=slen
             )
             if incremental_state is not None:
-                self_attn_rel_pos_bias = self_attn_rel_pos_bias[:, -1:, :]
+                self_attn_rel_pos_bias = self_attn_rel_pos_bias[-1:, :, :]
         cross_attn_rel_pos_bias = None
         if self.cross_attn_relative_position is not None:
             cross_attn_rel_pos_bias = self.cross_attn_relative_position(
-                batch_size=x.size(1),
+                batch_size=x.size(0),
                 qlen=slen,
-                klen=encoder_out["encoder_out"].size(0),
+                klen=encoder_out["encoder_out"].size(1),
             )
             if incremental_state is not None:
-                cross_attn_rel_pos_bias = cross_attn_rel_pos_bias[:, -1:, :]
+                cross_attn_rel_pos_bias = cross_attn_rel_pos_bias[-1:, :, :]
 
         # decoder layers
         inner_states = [x]
@@ -423,7 +420,7 @@ class Decoder(nn.Module):
         for idx, layer in enumerate(self.layers):
             if incremental_state is None:
                 self_attn_mask = torch.triu(
-                    torch.zeros([x.size(0), x.size(0)])
+                    torch.zeros([x.size(1), x.size(1)])
                     .float()
                     .fill_(float("-inf"))
                     .type_as(x),
@@ -451,8 +448,6 @@ class Decoder(nn.Module):
 
         if self.layer_norm is not None:
             x = self.layer_norm(x)
-
-        x = x.transpose(0, 1)
 
         if not features_only:
             x = self.output_layer(x)
