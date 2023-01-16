@@ -24,6 +24,7 @@ class MultiheadAttention(nn.Module):
         subln=False,
     ):
         super().__init__()
+        self.args = args
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.head_dim = embed_dim // num_heads
@@ -68,24 +69,26 @@ class MultiheadAttention(nn.Module):
         attn_mask=None,
         rel_pos=None,
     ):
-        tgt_len, bsz, embed_dim = query.size()
+        bsz, tgt_len, embed_dim = query.size()
         src_len = tgt_len
         assert embed_dim == self.embed_dim, f"query dim {embed_dim} != {self.embed_dim}"
-        assert list(query.size()) == [tgt_len, bsz, embed_dim]
 
-        src_len, key_bsz, _ = key.size()
+        key_bsz, src_len, _ = key.size()
         assert key_bsz == bsz, f"{query.size(), key.size()}"
         assert value is not None
-        assert src_len, bsz == value.shape[:2]
+        assert bsz, src_len == value.shape[:2]
 
         q = self.q_proj(query)
         k = self.k_proj(key)
         v = self.v_proj(value)
         q *= self.scaling
 
-        q = q.view(tgt_len, bsz * self.num_heads, self.head_dim).transpose(0, 1)
-        k = k.view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)
-        v = v.view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)
+        q = q.view(bsz, tgt_len, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(bsz, src_len, self.num_heads, self.head_dim).transpose(1, 2)
+        v = v.view(bsz, src_len, self.num_heads, self.head_dim).transpose(1, 2)
+        q = q.reshape(bsz * self.num_heads, tgt_len, self.head_dim)
+        k = k.reshape(bsz * self.num_heads, src_len, self.head_dim)
+        v = v.reshape(bsz * self.num_heads, src_len, self.head_dim)
 
         if incremental_state is not None:
             if "prev_key" in incremental_state:
@@ -138,7 +141,7 @@ class MultiheadAttention(nn.Module):
         attn_probs = self.dropout_module(attn_weights)
 
         attn = torch.bmm(attn_probs, v)
-        attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+        attn = attn.transpose(0, 1).reshape(tgt_len, bsz, embed_dim).transpose(0, 1)
 
         if self.inner_attn_ln is not None:
             attn = self.inner_attn_ln(attn)

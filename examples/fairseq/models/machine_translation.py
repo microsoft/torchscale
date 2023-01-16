@@ -371,7 +371,7 @@ class MTEncoder(Encoder, FairseqEncoder):
         )
 
     def reorder_encoder_out(self, encoder_out, new_order):
-        new_encoder_out = encoder_out["encoder_out"].index_select(1, new_order)
+        new_encoder_out = encoder_out["encoder_out"].index_select(0, new_order)
         new_encoder_embedding = encoder_out["encoder_embedding"].index_select(
             0, new_order
         )
@@ -382,7 +382,7 @@ class MTEncoder(Encoder, FairseqEncoder):
         encoder_states = encoder_out["encoder_states"]
         if len(encoder_states) > 0:
             for idx, state in enumerate(encoder_states):
-                encoder_states[idx] = state.index_select(1, new_order)
+                encoder_states[idx] = state.index_select(0, new_order)
 
         return {
             "encoder_out": new_encoder_out,  # T x B x C
