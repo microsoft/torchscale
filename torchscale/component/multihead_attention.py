@@ -5,8 +5,11 @@ import math
 
 import torch
 import torch.nn.functional as F
-from apex.normalization import FusedLayerNorm as LayerNorm
 from torch import nn
+try:
+    from apex.normalization import FusedLayerNorm as LayerNorm
+except ModuleNotFoundError:
+    from torch.nn import LayerNorm
 
 from .multiway_network import MultiwayWrapper
 from .xpos_relative_position import XPOS
@@ -41,7 +44,7 @@ class MultiheadAttention(nn.Module):
             args, nn.Linear(embed_dim, embed_dim, bias=True)
         )
         self.inner_attn_ln = (
-            MultiwayWrapper(args, LayerNorm(self.embed_dim))
+            MultiwayWrapper(args, LayerNorm(self.embed_dim, eps=args.layernorm_eps))
             if subln and self.self_attention
             else None
         )

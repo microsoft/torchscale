@@ -39,6 +39,7 @@ class EncoderConfig(object):
         )
         self.max_source_positions = kwargs.pop("max_source_positions", 1024)
         self.no_output_layer = kwargs.pop("no_output_layer", False)
+        self.layernorm_eps = kwargs.pop("layernorm_eps", 1e-5)
         # Text
         self.vocab_size = kwargs.pop("vocab_size", -1)
         # Vision
@@ -106,6 +107,7 @@ class DecoderConfig(object):
         )
         self.max_target_positions = kwargs.pop("max_target_positions", 1024)
         self.no_output_layer = kwargs.pop("no_output_layer", False)
+        self.layernorm_eps = kwargs.pop("layernorm_eps", 1e-5)
         # Text
         self.vocab_size = kwargs.pop("vocab_size", -1)
         # Fairscale
@@ -176,6 +178,7 @@ class EncoderDecoderConfig(object):
         self.max_source_positions = kwargs.pop("max_source_positions", 1024)
         self.max_target_positions = kwargs.pop("max_target_positions", 1024)
         self.no_output_layer = kwargs.pop("no_output_layer", False)
+        self.layernorm_eps = kwargs.pop("layernorm_eps", 1e-5)
         # Text
         self.vocab_size = kwargs.pop("vocab_size", -1)
         # Fairscale

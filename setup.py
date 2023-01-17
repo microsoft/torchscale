@@ -17,7 +17,7 @@ setup(
     license="MIT",
     url="https://github.com/msranlp/torchscale",
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
-    install_requires=["apex", "torch>=1.8", "fairscale==0.4.0", "timm==0.4.12"],
+    install_requires=["torch>=1.8", "fairscale==0.4.0", "timm==0.4.12"],
     python_requires=">=3.8.0",
     classifiers=[
         "Programming Language :: Python :: 3",

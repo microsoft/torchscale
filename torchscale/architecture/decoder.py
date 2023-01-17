@@ -6,7 +6,6 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
-from apex.normalization import FusedLayerNorm as LayerNorm
 from fairscale.nn import checkpoint_wrapper, wrap
 
 from torchscale.architecture.utils import init_bert_params
@@ -16,7 +15,10 @@ from torchscale.component.multihead_attention import MultiheadAttention
 from torchscale.component.relative_position_bias import RelativePositionBias
 from torchscale.component.xmoe.moe_layer import MOELayer
 from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
-
+try:
+    from apex.normalization import FusedLayerNorm as LayerNorm
+except ModuleNotFoundError:
+    from torch.nn import LayerNorm
 
 class DecoderLayer(nn.Module):
     def __init__(
@@ -43,14 +45,14 @@ class DecoderLayer(nn.Module):
 
         self.normalize_before = args.decoder_normalize_before
 
-        self.self_attn_layer_norm = LayerNorm(self.embed_dim)
+        self.self_attn_layer_norm = LayerNorm(self.embed_dim, eps=args.layernorm_eps)
 
         if not is_encoder_decoder:
             self.encoder_attn = None
             self.encoder_attn_layer_norm = None
         else:
             self.encoder_attn = self.build_encoder_attention(self.embed_dim, args)
-            self.encoder_attn_layer_norm = LayerNorm(self.embed_dim)
+            self.encoder_attn_layer_norm = LayerNorm(self.embed_dim, eps=args.layernorm_eps)
 
         self.is_moe_layer = is_moe_layer
         self.ffn_dim = args.decoder_ffn_embed_dim
@@ -82,7 +84,7 @@ class DecoderLayer(nn.Module):
             experts = make_experts(args, self.embed_dim, self.ffn_dim)
             self.moe_layer = MOELayer(gate, experts, args)
 
-        self.final_layer_norm = LayerNorm(self.embed_dim)
+        self.final_layer_norm = LayerNorm(self.embed_dim, eps=args.layernorm_eps)
 
         if args.deepnorm:
             if is_encoder_decoder:
@@ -99,6 +101,7 @@ class DecoderLayer(nn.Module):
             args.activation_fn,
             args.dropout,
             args.activation_dropout,
+            args.layernorm_eps,
             args.subln,
         )
 
@@ -233,7 +236,7 @@ class Decoder(nn.Module):
             self.output_projection = output_projection
 
         if args.layernorm_embedding:
-            self.layernorm_embedding = LayerNorm(embed_dim)
+            self.layernorm_embedding = LayerNorm(embed_dim, eps=args.layernorm_eps)
         else:
             self.layernorm_embedding = None
 
@@ -254,7 +257,7 @@ class Decoder(nn.Module):
         self.num_layers = len(self.layers)
 
         if args.decoder_normalize_before:
-            self.layer_norm = LayerNorm(embed_dim)
+            self.layer_norm = LayerNorm(embed_dim, eps=args.layernorm_eps)
         else:
             self.layer_norm = None
 

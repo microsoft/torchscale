@@ -8,7 +8,6 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from apex.normalization import FusedLayerNorm as LayerNorm
 from fairseq import utils
 from fairseq.dataclass import ChoiceEnum, FairseqDataclass
 from fairseq.models import BaseFairseqModel, register_model, register_model_architecture
@@ -16,6 +15,10 @@ from fairseq.models.squad import SQuADHead
 from fairseq.models.transformer import DEFAULT_MIN_PARAMS_TO_WRAP, Embedding
 from fairseq.modules import PositionalEmbedding
 from omegaconf import II
+try:
+    from apex.normalization import FusedLayerNorm as LayerNorm
+except ModuleNotFoundError:
+    from torch.nn import LayerNorm
 
 from torchscale.architecture.config import EncoderConfig
 

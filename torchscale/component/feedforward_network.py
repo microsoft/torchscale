@@ -4,7 +4,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from apex.normalization import FusedLayerNorm as LayerNorm
+try:
+    from apex.normalization import FusedLayerNorm as LayerNorm
+except ModuleNotFoundError:
+    from torch.nn import LayerNorm
 
 
 class set_torch_seed(object):
@@ -58,6 +61,7 @@ def make_experts(args, embed_dim, expert_ffn_dim):
                         args.activation_fn,
                         args.dropout,
                         args.activation_dropout,
+                        args.layernorm_eps,
                         args.subln,
                     )
                 )
@@ -74,6 +78,7 @@ def make_experts(args, embed_dim, expert_ffn_dim):
                     args.activation_fn,
                     args.dropout,
                     args.activation_dropout,
+                    args.layernorm_eps,
                     args.subln,
                 )
             )
@@ -98,6 +103,7 @@ class FeedForwardNetwork(nn.Module):
         activation_fn,
         dropout,
         activation_dropout,
+        layernorm_eps,
         subln=False,
     ):
         super().__init__()
@@ -109,7 +115,7 @@ class FeedForwardNetwork(nn.Module):
         self.dropout_module = torch.nn.Dropout(dropout, inplace=True)
         self.fc1 = nn.Linear(self.embed_dim, ffn_dim)
         self.fc2 = nn.Linear(ffn_dim, self.embed_dim)
-        self.ffn_layernorm = LayerNorm(ffn_dim) if subln else None
+        self.ffn_layernorm = LayerNorm(ffn_dim, eps=layernorm_eps) if subln else None
 
     def reset_parameters(self):
         self.fc1.reset_parameters()
