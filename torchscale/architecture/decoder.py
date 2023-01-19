@@ -31,7 +31,7 @@ class DecoderLayer(nn.Module):
         super().__init__()
         self.args = args
         self.embed_dim = args.decoder_embed_dim
-        self.dropout_module = torch.nn.Dropout(args.dropout, inplace=True)
+        self.dropout_module = torch.nn.Dropout(args.dropout)
 
         if args.drop_path_rate > 0:
             drop_path_prob = np.linspace(0, args.drop_path_rate, args.decoder_layers)[
@@ -217,7 +217,7 @@ class Decoder(nn.Module):
         super().__init__(**kwargs)
         self.args = args
 
-        self.dropout_module = torch.nn.Dropout(args.dropout, inplace=True)
+        self.dropout_module = torch.nn.Dropout(args.dropout)
 
         embed_dim = args.decoder_embed_dim
         self.embed_dim = embed_dim

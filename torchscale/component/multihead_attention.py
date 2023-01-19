@@ -48,7 +48,7 @@ class MultiheadAttention(nn.Module):
             if subln and self.self_attention
             else None
         )
-        self.dropout_module = torch.nn.Dropout(dropout, inplace=True)
+        self.dropout_module = torch.nn.Dropout(dropout)
         self.xpos = (
             XPOS(self.head_dim, args.xpos_scale_base)
             if args.xpos_rel_pos and self.self_attention

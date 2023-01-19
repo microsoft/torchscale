@@ -29,7 +29,7 @@ class EncoderLayer(nn.Module):
         self.embed_dim = args.encoder_embed_dim
         self.self_attn = self.build_self_attention(self.embed_dim, args)
         self.self_attn_layer_norm = MultiwayWrapper(args, LayerNorm(self.embed_dim, eps=args.layernorm_eps))
-        self.dropout_module = torch.nn.Dropout(args.dropout, inplace=True)
+        self.dropout_module = torch.nn.Dropout(args.dropout)
 
         if args.drop_path_rate > 0:
             drop_path_prob = np.linspace(0, args.drop_path_rate, args.encoder_layers)[
@@ -174,7 +174,7 @@ class Encoder(nn.Module):
         self.args = args
         super().__init__(**kwargs)
 
-        self.dropout_module = torch.nn.Dropout(args.dropout, inplace=True)
+        self.dropout_module = torch.nn.Dropout(args.dropout)
 
         embed_dim = args.encoder_embed_dim
         self.embed_scale = 1.0 if args.no_scale_embedding else math.sqrt(embed_dim)
