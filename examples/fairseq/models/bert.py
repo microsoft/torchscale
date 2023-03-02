@@ -349,6 +349,18 @@ class BertModel(BaseFairseqModel):
                 if prefix + "classification_heads." + k not in state_dict:
                     logger.info("Overwriting " + prefix + "classification_heads." + k)
                     state_dict[prefix + "classification_heads." + k] = v
+    
+    def get_normalized_probs_scriptable(
+        self,
+        net_output,
+        log_probs,
+        sample = None,
+    ):
+        logits = net_output[0]
+        if log_probs:
+            return utils.log_softmax(logits, dim=-1)
+        else:
+            return utils.softmax(logits, dim=-1)
 
     def forward(
         self,
