@@ -63,6 +63,7 @@ class RelativePositionBias(nn.Module):
             relative_position,  # shape (qlen, klen)
             bidirectional=self.bidirectional,
             num_buckets=self.num_buckets,
+            max_distance=self.max_distance,
         )
         rp_bucket = rp_bucket.to(self.relative_attention_bias.weight.device)
         values = self.relative_attention_bias(
