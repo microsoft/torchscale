@@ -4,7 +4,7 @@
 
 ```bash
 # Install the repo as a package:
-git clone https://github.com/msranlp/torchscale.git
+git clone https://github.com/microsoft/torchscale.git
 cd torchscale
 pip install -e .
 pip install git+https://github.com/shumingma/fairseq.git@moe
