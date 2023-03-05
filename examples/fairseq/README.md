@@ -166,7 +166,7 @@ python -m torch.distributed.launch --nproc_per_node=8 --nnodes=8 train.py ${PATH
         --moe-gating-use-fp32 --moe-second-expert-policy random --moe-normalize-gate-prob-before-dropping \
         --moe-eval-capacity-token-fraction -1.0 \
         --criterion moe_cross_entropy --moe-gate-loss-wt 0.01 --moe-gate-loss-combine-method sum \
-        --use-xmoe
+        --use-xmoe --pad-to-max-length
 ```
 
 ## Example: GPT Pretraining
