@@ -130,6 +130,9 @@ class BertConfig(FairseqDataclass):
     tpu: bool = II("common.tpu")
     rel_pos_buckets: int = field(default=0, metadata={"help": ""})
     max_rel_pos: int = field(default=0, metadata={"help": ""})
+    use_xmoe: Optional[bool] = field(
+        default=False,
+    )
     moe_freq: int = field(
         default=0,
         metadata={"help": "Frequency at which we insert MoE Transformer layers"},

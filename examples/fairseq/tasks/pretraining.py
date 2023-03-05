@@ -117,6 +117,9 @@ class PretrainingConfig(FairseqDataclass):
         default="",
         metadata={"help": ""},
     )
+    pad_to_max_length: bool = field(
+        default=False,
+        )
 
 
 @register_task("pretraining", dataclass=PretrainingConfig)
