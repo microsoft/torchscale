@@ -10,7 +10,7 @@ pip install -e .
 pip install git+https://github.com/shumingma/fairseq.git@moe
 pip install git+https://github.com/shumingma/infinibatch.git
 pip install iopath
-pip install --upgrade numpy
+pip install numpy==1.23.0
 ```
 
 ## Example: BERT Pretraining
