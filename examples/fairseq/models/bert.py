@@ -375,7 +375,6 @@ class BertModel(BaseFairseqModel):
             src_tokens, features_only=True, return_all_hiddens=return_all_hiddens
         )
         x, extra = encoder_out["encoder_out"], encoder_out
-        x = x.transpose(0, 1)
 
         if classification_head_name is not None:
             x = self.classification_heads[classification_head_name](x)
