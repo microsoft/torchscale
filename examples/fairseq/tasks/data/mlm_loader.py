@@ -166,6 +166,9 @@ class MLMLoader(BaseBatchGen):
             mlm_target_max_length = max([len(x[1]) for x in batch])
             s2s_source_max_length = max([len(x[2]) for x in batch])
             s2s_target_max_length = max([len(x[3]) for x in batch])
+            if self.args.pad_to_max_length:
+                mlm_source_max_length = self.args.tokens_per_sample
+                mlm_target_max_length = self.args.tokens_per_sample
 
             mlm_source_ids = np.full(
                 shape=(batch_size, mlm_source_max_length),
