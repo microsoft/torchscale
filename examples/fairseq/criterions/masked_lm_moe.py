@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
+import torch
 import torch.nn.functional as F
 from fairseq import metrics, utils
 from fairseq.criterions import MoECriterion, register_criterion, MoECriterionConfig
@@ -50,7 +51,7 @@ class MaskedLMMoECrossEntropyCriterion(MoECriterion):
     @staticmethod
     def reduce_metrics(logging_outputs) -> None:
         """Aggregate logging outputs from data parallel training."""
-        MoECrossEntropyCriterion.reduce_moe_metrics(logging_outputs)
+        MaskedLMMoECrossEntropyCriterion.reduce_moe_metrics(logging_outputs)
 
         loss_sum = sum(log.get("inner_loss", 0) for log in logging_outputs)
         ntokens = sum(log.get("ntokens", 0) for log in logging_outputs)

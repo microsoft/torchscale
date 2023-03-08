@@ -4,6 +4,7 @@
 # flake8: noqa
 import models
 import tasks
+import criterions
 from fairseq_cli.generate import cli_main
 
 if __name__ == "__main__":
