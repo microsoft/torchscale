@@ -24,9 +24,6 @@ class MaskedLMMoECrossEntropyCriterion(MoECriterion):
         )
 
         net_output = model(**sample["net_input"], masked_tokens=masked_tokens)
-        sample_size = (
-            sample["target"].size(0) if self.sentence_avg else sample["ntokens"]
-        )
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
         lprobs = lprobs.view(-1, lprobs.size(-1))
         target = model.get_targets(sample, net_output)
