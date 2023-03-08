@@ -127,7 +127,6 @@ python -m torch.distributed.launch --nproc_per_node=8 --nnodes=8 train.py ${PATH
         --span-length 3.0  \
         --leave-unmasked-prob 0.0  \
         --random-token-prob 0.0 \
-        --criterion masked_lm  \
         --arch mlm_base  \
         --share-encoder-input-output-embed \
         --required-batch-size-multiple 8 \
@@ -165,7 +164,7 @@ python -m torch.distributed.launch --nproc_per_node=8 --nnodes=8 train.py ${PATH
         --moe-expert-count 64 --moe-freq 2 \
         --moe-gating-use-fp32 --moe-second-expert-policy random --moe-normalize-gate-prob-before-dropping \
         --moe-eval-capacity-token-fraction -1.0 \
-        --criterion moe_cross_entropy --moe-gate-loss-wt 0.01 --moe-gate-loss-combine-method sum \
+        --criterion masked_lm_moe_cross_entropy --moe-gate-loss-wt 0.01 --moe-gate-loss-combine-method sum \
         --use-xmoe --pad-to-max-length
 ```
 
