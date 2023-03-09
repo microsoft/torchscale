@@ -43,3 +43,13 @@ class MultiwayNetwork(nn.Module):
         # x1, x2 = x[:self.split_position], x[self.split_position:]
         y1, y2 = self.A(x1, **kwargs), self.B(x2, **kwargs)
         return torch.cat([y1, y2], dim=self.dim)
+
+
+class MutliwayEmbedding(MultiwayNetwork):
+    def __init__(self, modules, dim=1):
+        super(MultiwayNetwork, self).__init__()
+        self.dim = dim
+        assert len(modules) == 2
+        self.A = modules[0]
+        self.B = modules[1]
+        self.split_position = -1

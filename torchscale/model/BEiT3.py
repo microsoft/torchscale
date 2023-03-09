@@ -10,7 +10,7 @@ from torchscale.component.embedding import (
     TextEmbedding,
     VisionEmbedding,
 )
-from torchscale.component.multiway_network import MultiwayWrapper
+from torchscale.component.multiway_network import MutliwayEmbedding
 
 
 class BEiT3(nn.Module):
@@ -29,9 +29,12 @@ class BEiT3(nn.Module):
             contain_mask_token=True,
             prepend_cls_token=True,
         )
-        embed_positions = MultiwayWrapper(
-            args,
-            PositionalEmbedding(args.max_source_positions, args.encoder_embed_dim),
+        # being consistent with Fairseq, which starts from 2 for position embedding
+        embed_positions = MutliwayEmbedding(
+            modules=[
+                PositionalEmbedding(self.vision_embed.num_position_embeddings() + 2, args.encoder_embed_dim),
+                PositionalEmbedding(args.max_source_positions, args.encoder_embed_dim),
+            ],
             dim=1,
         )
         self.encoder = Encoder(
@@ -47,7 +50,10 @@ class BEiT3(nn.Module):
         textual_tokens=None,
         visual_tokens=None,
         text_padding_position=None,
+        attn_mask=None,
         vision_masked_position=None,
+        incremental_state=None,
+        positions=None,
     ):
         assert textual_tokens is not None or visual_tokens is not None
 
@@ -79,8 +85,12 @@ class BEiT3(nn.Module):
         encoder_out = self.encoder(
             src_tokens=None,
             encoder_padding_mask=encoder_padding_mask,
+            attn_mask=attn_mask,
             token_embeddings=x,
             multiway_split_position=multiway_split_position,
+            incremental_state=incremental_state,
+            positions=positions,
         )
+        encoder_out["multiway_split_position"] = multiway_split_position
 
         return encoder_out

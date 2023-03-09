@@ -113,7 +113,7 @@ class EncoderLayer(nn.Module):
     def residual_connection(self, x, residual):
         return residual * self.alpha + x
 
-    def forward(self, x, encoder_padding_mask, attn_mask=None, rel_pos=None, multiway_split_position=None):
+    def forward(self, x, encoder_padding_mask, attn_mask=None, rel_pos=None, multiway_split_position=None, incremental_state=None):
         if multiway_split_position is not None:
             assert self.args.multiway
             self.apply(set_split_position(multiway_split_position))
@@ -131,6 +131,7 @@ class EncoderLayer(nn.Module):
             key_padding_mask=encoder_padding_mask,
             attn_mask=attn_mask,
             rel_pos=rel_pos,
+            incremental_state=incremental_state,
         )
         x = self.dropout_module(x)
 
@@ -214,7 +215,7 @@ class Encoder(nn.Module):
             )
         self.num_layers = len(self.layers)
 
-        if args.encoder_normalize_before:
+        if args.encoder_normalize_before and args.normalize_output:
             self.layer_norm = MultiwayWrapper(args, LayerNorm(embed_dim, eps=args.layernorm_eps))
         else:
             self.layer_norm = None
@@ -308,15 +309,16 @@ class Encoder(nn.Module):
         self,
         src_tokens,
         token_embedding=None,
+        positions=None,
     ):
         if token_embedding is None:
             token_embedding = self.embed_tokens(src_tokens)
         x = embed = self.embed_scale * token_embedding
         if self.embed_positions is not None:
             if src_tokens is not None:
-                x = embed + self.embed_positions(src_tokens)
+                x = embed + self.embed_positions(src_tokens, positions=positions)
             else:
-                x = embed + self.embed_positions(x)
+                x = embed + self.embed_positions(x, positions=positions)
         if self.layernorm_embedding is not None:
             x = self.layernorm_embedding(x)
         x = self.dropout_module(x)
@@ -326,10 +328,13 @@ class Encoder(nn.Module):
         self,
         src_tokens,
         encoder_padding_mask=None,
+        attn_mask=None,
         return_all_hiddens=False,
         token_embeddings=None,
         multiway_split_position=None,
         features_only=False,
+        incremental_state=None,
+        positions=None,
         **kwargs
     ):
         assert src_tokens is not None or token_embeddings is not None
@@ -349,7 +354,7 @@ class Encoder(nn.Module):
             assert self.args.multiway
             self.apply(set_split_position(multiway_split_position))
 
-        x, encoder_embedding = self.forward_embedding(src_tokens, token_embeddings)
+        x, encoder_embedding = self.forward_embedding(src_tokens, token_embeddings, positions)
         x = x * (1 - encoder_padding_mask.unsqueeze(-1).type_as(x))
 
         encoder_states = []
@@ -363,10 +368,16 @@ class Encoder(nn.Module):
                 batch_size=x.size(0), qlen=x.size(1), klen=x.size(1)
             )
 
+        # incremental_state is not None during inference if we use the bidirectional encoder as a generator as in s2s-ft (https://arxiv.org/abs/2110.13640)
         l_aux = []
-        for layer in self.layers:
+        for idx, layer in enumerate(self.layers):
             x, l_aux_i = layer(
-                x, encoder_padding_mask=encoder_padding_mask, rel_pos=rel_pos_bias, multiway_split_position=multiway_split_position
+                x,
+                encoder_padding_mask=encoder_padding_mask if incremental_state is None else None,
+                attn_mask=attn_mask,
+                rel_pos=rel_pos_bias,
+                multiway_split_position=multiway_split_position,
+                incremental_state=incremental_state[idx] if incremental_state is not None else None,
             )
             if return_all_hiddens:
                 assert encoder_states is not None

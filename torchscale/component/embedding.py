@@ -60,6 +60,12 @@ class VisionEmbedding(nn.Module):
         else:
             self.cls_token = None
 
+    def num_position_embeddings(self):
+        if self.cls_token is None:
+            return self.num_patches
+        else:
+            return self.num_patches + 1
+
     def forward(self, x, masked_position=None, **kwargs):
         B, C, H, W = x.shape
         assert (
