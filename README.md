@@ -125,7 +125,7 @@ We have the examples of how to use TorchScale in the following scenarios/tasks:
 
 - Multimodal
 
-  * [Multiway Transformers/BEiT-3](torchscale/model/BEiT3.py) [In progress]
+  * [Multiway Transformers/BEiT-3](https://github.com/microsoft/unilm/tree/master/beit3)
 
 We plan to provide more examples regarding different tasks (e.g. vision pretraining and speech recognition) and various deep learning toolkits (e.g. [DeepSpeed](https://github.com/microsoft/DeepSpeed) and [Megatron-LM](https://github.com/NVIDIA/Megatron-LM)). Any comments or PRs are welcome!
 
