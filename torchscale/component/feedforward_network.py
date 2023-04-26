@@ -10,6 +10,9 @@ except ModuleNotFoundError:
     from torch.nn import LayerNorm
 
 
+from .xmoe.global_groups import get_moe_group
+
+
 class set_torch_seed(object):
     def __init__(self, seed):
         assert isinstance(seed, int)
@@ -70,7 +73,9 @@ def make_experts(args, embed_dim, expert_ffn_dim):
             world_size % args.moe_expert_count == 0
         ), f"{world_size}, {args.moe_expert_count}"
 
-        with set_torch_seed(start_seed + ddp_rank % args.moe_expert_count):
+        moe_idx, _ = get_moe_group(args.moe_expert_count)
+
+        with set_torch_seed(start_seed + moe_idx):
             expert_list.append(
                 FeedForwardNetwork(
                     embed_dim,
