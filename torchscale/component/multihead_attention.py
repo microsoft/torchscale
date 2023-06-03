@@ -71,6 +71,7 @@ class MultiheadAttention(nn.Module):
         key_padding_mask=None,
         attn_mask=None,
         rel_pos=None,
+        is_first_step=False,
     ):
         bsz, tgt_len, embed_dim = query.size()
         src_len = tgt_len
@@ -112,7 +113,7 @@ class MultiheadAttention(nn.Module):
             src_len = k.size(1)
 
         if self.xpos is not None:
-            if incremental_state is not None:
+            if incremental_state is not None and not is_first_step:
                 offset = src_len - 1
             else:
                 offset = 0
