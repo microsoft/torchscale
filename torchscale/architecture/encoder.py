@@ -13,6 +13,7 @@ except ModuleNotFoundError:
     from torch.nn import LayerNorm
 
 from torchscale.architecture.utils import init_bert_params
+from torchscale.architecture.config import EncoderConfig
 from torchscale.component.droppath import DropPath
 from torchscale.component.feedforward_network import FeedForwardNetwork, make_experts
 from torchscale.component.multihead_attention import MultiheadAttention
@@ -23,7 +24,11 @@ from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, args, depth, is_moe_layer=False, is_encoder_decoder=False):
+    def __init__(self, 
+                 args: EncoderConfig, 
+                 depth, 
+                 is_moe_layer: bool = False, 
+                 is_encoder_decoder: bool = False):
         super().__init__()
         self.args = args
         self.embed_dim = args.encoder_embed_dim
@@ -165,11 +170,11 @@ class EncoderLayer(nn.Module):
 class Encoder(nn.Module):
     def __init__(
         self,
-        args,
+        args: EncoderConfig,
         embed_tokens=None,
         embed_positions=None,
         output_projection=None,
-        is_encoder_decoder=False,
+        is_encoder_decoder: bool = False,
         **kwargs
     ):
         self.args = args

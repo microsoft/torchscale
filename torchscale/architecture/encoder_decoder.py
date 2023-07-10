@@ -3,6 +3,7 @@
 
 import torch.nn as nn
 
+from torchscale.architecture.config import EncoderDecoderConfig
 from torchscale.architecture.decoder import Decoder
 from torchscale.architecture.encoder import Encoder
 
