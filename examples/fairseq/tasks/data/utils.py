@@ -62,7 +62,7 @@ class NativeCheckpointableIterator(iterators.CheckpointableIterator):
         pass
 
 
-class WeightIterator(object):
+class WeightIterator:
     def __init__(self, weights, seed):
         self.weights = weights
         self.seed = seed

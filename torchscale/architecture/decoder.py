@@ -9,12 +9,14 @@ import torch.nn as nn
 from fairscale.nn import checkpoint_wrapper, wrap
 
 from torchscale.architecture.utils import init_bert_params
+from torchscale.architecture.config import DecoderConfig, EncoderConfig
 from torchscale.component.droppath import DropPath
 from torchscale.component.feedforward_network import FeedForwardNetwork, make_experts
 from torchscale.component.multihead_attention import MultiheadAttention
 from torchscale.component.relative_position_bias import RelativePositionBias
 from torchscale.component.xmoe.moe_layer import MOELayer
 from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
+
 try:
     from apex.normalization import FusedLayerNorm as LayerNorm
 except ModuleNotFoundError:
@@ -23,7 +25,7 @@ except ModuleNotFoundError:
 class DecoderLayer(nn.Module):
     def __init__(
         self,
-        args,
+        args: DecoderConfig,
         depth,
         is_moe_layer=False,
         is_encoder_decoder=False,
@@ -209,7 +211,7 @@ class DecoderLayer(nn.Module):
 class Decoder(nn.Module):
     def __init__(
         self,
-        args,
+        args: DecoderConfig,
         embed_tokens=None,
         embed_positions=None,
         output_projection=None,

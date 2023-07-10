@@ -3,6 +3,7 @@
 
 import torch.nn as nn
 
+from torchscale.architecture.config import EncoderDecoderConfig
 from torchscale.architecture.decoder import Decoder
 from torchscale.architecture.encoder import Encoder
 
@@ -10,7 +11,7 @@ from torchscale.architecture.encoder import Encoder
 class EncoderDecoder(nn.Module):
     def __init__(
         self,
-        args,
+        args: EncoderDecoderConfig,
         encoder_embed_tokens=None,
         encoder_embed_positions=None,
         decoder_embed_tokens=None,
