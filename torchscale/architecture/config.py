@@ -2,7 +2,7 @@
 # Licensed under The MIT License [see LICENSE for details]
 
 
-class EncoderConfig(object):
+class EncoderConfig:
     def __init__(self, **kwargs):
         self.encoder_embed_dim = kwargs.pop("encoder_embed_dim", 768)
         self.encoder_attention_heads = kwargs.pop("encoder_attention_heads", 12)
@@ -71,7 +71,7 @@ class EncoderConfig(object):
                 self.__dict__[hp] = getattr(args, hp, None)
 
 
-class DecoderConfig(object):
+class DecoderConfig:
     def __init__(self, **kwargs):
         self.decoder_embed_dim = kwargs.pop("decoder_embed_dim", 768)
         self.decoder_attention_heads = kwargs.pop("decoder_attention_heads", 12)
@@ -135,7 +135,7 @@ class DecoderConfig(object):
                 self.__dict__[hp] = getattr(args, hp, None)
 
 
-class EncoderDecoderConfig(object):
+class EncoderDecoderConfig:
     def __init__(self, **kwargs):
         self.encoder_embed_dim = kwargs.pop("encoder_embed_dim", 768)
         self.encoder_attention_heads = kwargs.pop("encoder_attention_heads", 12)
