@@ -142,6 +142,7 @@ class EncoderDecoderConfig(object):
         self.encoder_ffn_embed_dim = kwargs.pop("encoder_ffn_embed_dim", 3072)
         self.encoder_layers = kwargs.pop("encoder_layers", 12)
         self.encoder_normalize_before = kwargs.pop("encoder_normalize_before", True)
+        self.normalize_output = kwargs.pop("normalize_output", True)
         self.decoder_embed_dim = kwargs.pop("decoder_embed_dim", 768)
         self.decoder_attention_heads = kwargs.pop("decoder_attention_heads", 12)
         self.decoder_ffn_embed_dim = kwargs.pop("decoder_ffn_embed_dim", 3072)
