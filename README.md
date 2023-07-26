@@ -13,6 +13,12 @@ It has the implementation of fundamental research to improve modeling generality
 - Capability - A [**Length-Extrapolatable**](https://arxiv.org/abs/2212.10554) Transformer
 - Efficiency - [**X-MoE**](https://arxiv.org/abs/2204.09179): scalable & finetunable sparse Mixture-of-Experts (MoE)
 
+### Revolutionizing Transformers for (M)LLMs and AI
+
+> [**RetNet**](https://arxiv.org/abs/2307.08621): Retentive Network: A Successor to Transformer for Large Language Models
+
+> [**LongNet**](https://arxiv.org/abs/2307.02486): Scaling Transformers to 1,000,000,000 Tokens
+
 ## News
 
 - November, 2022: TorchScale 0.1.1 released [[Paper](https://arxiv.org/abs/2211.13184)] [[PyPI](https://pypi.org/project/torchscale/)]
