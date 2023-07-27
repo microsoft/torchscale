@@ -1,4 +1,4 @@
-# TorchScale - A Library for Foundation Architecture for (M)LLMs
+# TorchScale - A Library of Foundation Architectures
 
 <p>
   <a href="https://github.com/microsoft/torchscale/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
