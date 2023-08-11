@@ -65,7 +65,7 @@ Also, the JSON file should be in the format like this:
 ]
 ```
 
-You can quickly get started with our processed vocabulary files: [sentencepiece.bpe.model](https://publicmodel.blob.core.windows.net/torchscale/vocab/sentencepiece.bpe.model) and [dict.txt](https://publicmodel.blob.core.windows.net/torchscale/vocab/dict.txt). Note that this vocabulary is English-only with 64K tokens. To train a new `sentencepiece.bpe.model` on your own data, please refer to the [SentencePiece](https://github.com/google/sentencepiece) repo. With the sentecepiece model and the installed `sentencepiece` library, you can extract the `dict.txt` file from it by
+You can quickly get started with our processed vocabulary files: [sentencepiece.bpe.model](https://publicmodel.blob.core.windows.net/torchscale/vocab/sentencepiece.bpe.model?sv=2020-04-08&st=2023-08-11T03%3A09%3A09Z&se=2053-08-12T03%3A09%3A00Z&sr=c&sp=rl&sig=3b6nDda%2Fu0vD6E%2BhoTO%2BHfNSnSlUfgvXFV%2FCNKquWjE%3D) and [dict.txt](https://publicmodel.blob.core.windows.net/torchscale/vocab/dict.txt?sv=2020-04-08&st=2023-08-11T03%3A09%3A09Z&se=2053-08-12T03%3A09%3A00Z&sr=c&sp=rl&sig=3b6nDda%2Fu0vD6E%2BhoTO%2BHfNSnSlUfgvXFV%2FCNKquWjE%3D). Note that this vocabulary is English-only with 64K tokens. To train a new `sentencepiece.bpe.model` on your own data, please refer to the [SentencePiece](https://github.com/google/sentencepiece) repo. With the sentecepiece model and the installed `sentencepiece` library, you can extract the `dict.txt` file from it by
 ```
 spm_export_vocab --model=sentencepiece.bpe.model | sed 's/\t/ /g' | tail -n +4 > dict.txt
 ```
