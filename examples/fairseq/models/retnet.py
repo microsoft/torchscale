@@ -70,7 +70,7 @@ class LanguageConfig(FairseqDataclass):
         default=False,
         metadata={"help": "use learned positional embeddings in the decoder"},
     )
-    norm_embedding: bool = field(
+    layernorm_embedding: bool = field(
         default=False, metadata={"help": "add norm to embedding"}
     )
     no_scale_embedding: bool = field(
@@ -325,7 +325,7 @@ def retnet_base_architecture(args):
     args.tie_adaptive_proj = getattr(args, "tie_adaptive_proj", False)
 
     args.no_scale_embedding = getattr(args, "no_scale_embedding", False)
-    args.norm_embedding = getattr(args, "norm_embedding", False)
+    args.layernorm_embedding = getattr(args, "layernorm_embedding", False)
     args.checkpoint_activations = getattr(args, "checkpoint_activations", False)
     args.offload_activations = getattr(args, "offload_activations", False)
     if args.offload_activations:

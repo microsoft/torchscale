@@ -11,7 +11,8 @@ from fairscale.nn import checkpoint_wrapper, wrap
 
 from torchscale.architecture.utils import init_bert_params
 from torchscale.component.droppath import DropPath
-from torchscale.component.gate_linear_unit import GLU, make_experts
+from torchscale.component.feedforward_network import make_experts
+from torchscale.component.gate_linear_unit import GLU
 from torchscale.component.multiscale_retention import MultiScaleRetention
 from torchscale.component.xmoe.moe_layer import MOELayer
 from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
@@ -88,7 +89,7 @@ class DecoderLayer(nn.Module):
 
         self.normalize_before = args.decoder_normalize_before
 
-        self.retention_layer_norm = RMSNorm(self.embed_dim, eps=args.norm_eps)
+        self.retention_layer_norm = RMSNorm(self.embed_dim, eps=args.layernorm_eps)
 
         self.is_moe_layer = is_moe_layer
         self.ffn_dim = args.decoder_ffn_embed_dim
@@ -120,7 +121,7 @@ class DecoderLayer(nn.Module):
             experts = make_experts(args, self.embed_dim, self.ffn_dim)
             self.moe_layer = MOELayer(gate, experts, args)
 
-        self.final_layer_norm = RMSNorm(self.embed_dim, eps=args.norm_eps)
+        self.final_layer_norm = RMSNorm(self.embed_dim, eps=args.layernorm_eps)
 
         if args.deepnorm:
             self.alpha = math.pow(2.0 * args.decoder_layers, 0.25)
@@ -220,10 +221,10 @@ class RetNetDecoder(nn.Module):
         else:
             self.output_projection = output_projection
 
-        if args.norm_embedding:
-            self.norm_embedding = RMSNorm(embed_dim, eps=args.norm_eps)
+        if args.layernorm_embedding:
+            self.layernorm_embedding = RMSNorm(embed_dim, eps=args.layernorm_eps)
         else:
-            self.norm_embedding = None
+            self.layernorm_embedding = None
 
         self.layers = nn.ModuleList([])
 
@@ -241,7 +242,7 @@ class RetNetDecoder(nn.Module):
         self.num_layers = len(self.layers)
 
         if args.decoder_normalize_before:
-            self.layer_norm = RMSNorm(embed_dim, eps=args.norm_eps)
+            self.layer_norm = RMSNorm(embed_dim, eps=args.layernorm_eps)
         else:
             self.layer_norm = None
 
@@ -309,8 +310,8 @@ class RetNetDecoder(nn.Module):
 
         x = embed = self.embed_scale * token_embedding
 
-        if self.norm_embedding is not None:
-            x = self.norm_embedding(x)
+        if self.layernorm_embedding is not None:
+            x = self.layernorm_embedding(x)
 
         x = self.dropout_module(x)
 
@@ -345,7 +346,7 @@ class RetNetDecoder(nn.Module):
             slen = prev_output_tokens.size(1)
         # relative position
         retention_rel_pos = self.retnet_rel_pos(slen, incremental_state is not None and not is_first_step, chunkwise_recurrent=self.chunkwise_recurrent)
-
+        retention_rel_pos_no_block = self.retnet_rel_pos(slen, incremental_state is not None and not is_first_step, chunkwise_recurrent=False)
         # decoder layers
         inner_states = [x]
 
@@ -360,12 +361,20 @@ class RetNetDecoder(nn.Module):
                 if idx not in incremental_state:
                     incremental_state[idx] = {}
 
+            x_no_block, _ = layer(
+                x,
+                incremental_state[idx] if incremental_state is not None else None,
+                retention_rel_pos=retention_rel_pos_no_block,
+                chunkwise_recurrent=False,
+            )
             x, l_aux_i = layer(
                 x,
                 incremental_state[idx] if incremental_state is not None else None,
                 retention_rel_pos=retention_rel_pos,
                 chunkwise_recurrent=self.chunkwise_recurrent,
             )
+            print(x[0], x_no_block[0], (x - x_no_block).abs().max(), (x - x_no_block).abs().sum())
+            exit()
             l_aux.append(l_aux_i)
             inner_states.append(x)
             
