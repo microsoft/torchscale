@@ -212,8 +212,9 @@ class EncoderDecoderConfig(object):
 class RetNetConfig(object):
     def __init__(self, **kwargs):
         self.decoder_embed_dim = kwargs.pop("decoder_embed_dim", 768)
+        self.decoder_value_embed_dim = kwargs.pop("decoder_value_embed_dim", 1280)
         self.decoder_retention_heads = kwargs.pop("decoder_retention_heads", 3)
-        self.decoder_ffn_embed_dim = kwargs.pop("decoder_ffn_embed_dim", 1536)
+        self.decoder_ffn_embed_dim = kwargs.pop("decoder_ffn_embed_dim", 1280)
         self.decoder_layers = kwargs.pop("decoder_layers", 12)
         self.decoder_normalize_before = kwargs.pop("decoder_normalize_before", True)
         self.activation_fn = kwargs.pop("activation_fn", "gelu")
@@ -221,7 +222,7 @@ class RetNetConfig(object):
         self.drop_path_rate = kwargs.pop("drop_path_rate", 0.0)
         self.activation_dropout = kwargs.pop("activation_dropout", 0.0)
         self.no_scale_embedding = kwargs.pop("no_scale_embedding", True)
-        self.layernorm_embedding = kwargs.pop("layernorm_embedding", False)
+        self.norm_embedding = kwargs.pop("norm_embedding", False)
         self.moe_freq = kwargs.pop("moe_freq", 0)
         self.moe_top1_expert = kwargs.pop("moe_top1_expert", False)
         self.moe_expert_count = kwargs.pop("moe_expert_count", 0)
@@ -244,7 +245,7 @@ class RetNetConfig(object):
         )
         self.max_target_positions = kwargs.pop("max_target_positions", 1024)
         self.no_output_layer = kwargs.pop("no_output_layer", False)
-        self.layernorm_eps = kwargs.pop("layernorm_eps", 1e-5)
+        self.norm_eps = kwargs.pop("norm_eps", 1e-6)
         # Blockwise
         self.chunkwise_recurrent = kwargs.pop("chunkwise_recurrent", False)
         self.recurrent_chunk_size = kwargs.pop("recurrent_chunk_size", 512)

@@ -11,14 +11,11 @@ from fairscale.nn import checkpoint_wrapper, wrap
 
 from torchscale.architecture.utils import init_bert_params
 from torchscale.component.droppath import DropPath
-from torchscale.component.feedforward_network import FeedForwardNetwork, make_experts
+from torchscale.component.gate_linear_unit import GLU, make_experts
 from torchscale.component.multiscale_retention import MultiScaleRetention
 from torchscale.component.xmoe.moe_layer import MOELayer
 from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
-try:
-    from apex.normalization import FusedLayerNorm as LayerNorm
-except ModuleNotFoundError:
-    from torch.nn import LayerNorm
+from torchscale.component.rms_norm import RMSNorm
     
     
 class RetNetRelPos(nn.Module):
@@ -91,7 +88,7 @@ class DecoderLayer(nn.Module):
 
         self.normalize_before = args.decoder_normalize_before
 
-        self.retention_layer_norm = LayerNorm(self.embed_dim, eps=args.layernorm_eps)
+        self.retention_layer_norm = RMSNorm(self.embed_dim, eps=args.norm_eps)
 
         self.is_moe_layer = is_moe_layer
         self.ffn_dim = args.decoder_ffn_embed_dim
@@ -123,7 +120,7 @@ class DecoderLayer(nn.Module):
             experts = make_experts(args, self.embed_dim, self.ffn_dim)
             self.moe_layer = MOELayer(gate, experts, args)
 
-        self.final_layer_norm = LayerNorm(self.embed_dim, eps=args.layernorm_eps)
+        self.final_layer_norm = RMSNorm(self.embed_dim, eps=args.norm_eps)
 
         if args.deepnorm:
             self.alpha = math.pow(2.0 * args.decoder_layers, 0.25)
@@ -131,20 +128,19 @@ class DecoderLayer(nn.Module):
             self.alpha = 1.0
 
     def build_ffn(self, embed_dim, args):
-        return FeedForwardNetwork(
+        return GLU(
             embed_dim,
             self.ffn_dim,
             args.activation_fn,
             args.dropout,
             args.activation_dropout,
-            args.layernorm_eps,
-            args.subln,
         )
 
     def build_retention(self, embed_dim, args):
         return MultiScaleRetention(
             args,
             embed_dim,
+            args.decoder_value_embed_dim,
             args.decoder_retention_heads,
         )
 
@@ -224,10 +220,10 @@ class RetNetDecoder(nn.Module):
         else:
             self.output_projection = output_projection
 
-        if args.layernorm_embedding:
-            self.layernorm_embedding = LayerNorm(embed_dim, eps=args.layernorm_eps)
+        if args.norm_embedding:
+            self.norm_embedding = RMSNorm(embed_dim, eps=args.norm_eps)
         else:
-            self.layernorm_embedding = None
+            self.norm_embedding = None
 
         self.layers = nn.ModuleList([])
 
@@ -245,7 +241,7 @@ class RetNetDecoder(nn.Module):
         self.num_layers = len(self.layers)
 
         if args.decoder_normalize_before:
-            self.layer_norm = LayerNorm(embed_dim, eps=args.layernorm_eps)
+            self.layer_norm = RMSNorm(embed_dim, eps=args.norm_eps)
         else:
             self.layer_norm = None
 
@@ -264,17 +260,6 @@ class RetNetDecoder(nn.Module):
                     or "v_proj" in name
                 ):
                     p.data.div_(init_scale)
-
-        if args.subln:
-            init_scale = math.sqrt(math.log(args.decoder_layers * 2))
-            for name, p in self.named_parameters():
-                if (
-                    "fc1" in name
-                    or "fc2" in name
-                    or "out_proj" in name
-                    or "v_proj" in name
-                ):
-                    p.data.mul_(init_scale)
 
     def build_output_projection(
         self,
@@ -324,8 +309,8 @@ class RetNetDecoder(nn.Module):
 
         x = embed = self.embed_scale * token_embedding
 
-        if self.layernorm_embedding is not None:
-            x = self.layernorm_embedding(x)
+        if self.norm_embedding is not None:
+            x = self.norm_embedding(x)
 
         x = self.dropout_module(x)
 

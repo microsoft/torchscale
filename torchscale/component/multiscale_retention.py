@@ -1,15 +1,11 @@
 # Copyright (c) 2022 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 
-import math
 
 import torch
 import torch.nn.functional as F
 from torch import nn
-try:
-    from apex.normalization import FusedLayerNorm as LayerNorm
-except ModuleNotFoundError:
-    from torch.nn import LayerNorm
+from .rms_norm import RMSNorm
 
 from .multiway_network import MultiwayWrapper
 
@@ -45,29 +41,29 @@ class MultiScaleRetention(nn.Module):
         self,
         args,
         embed_dim,
+        value_dim,
         num_heads,
-        value_factor=2,
         gate_fn="swish",
     ):
         super().__init__()
         self.args = args
-        self.factor = value_factor
         self.embed_dim = embed_dim
+        self.value_dim = value_dim
         self.num_heads = num_heads
-        self.head_dim = self.embed_dim * self.factor // num_heads
+        self.head_dim = self.value_dim // num_heads
         self.key_dim = self.embed_dim // num_heads
         self.scaling = self.key_dim ** -0.5
         
         self.gate_fn = get_activation_fn(activation=str(gate_fn))
 
-        self.q_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim, bias=True))
-        self.k_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim, bias=True))
-        self.v_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim * self.factor, bias=True))
-        self.g_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim * self.factor, bias=True))
+        self.q_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim, bias=False))
+        self.k_proj = MultiwayWrapper(args, nn.Linear(embed_dim, embed_dim, bias=False))
+        self.v_proj = MultiwayWrapper(args, nn.Linear(embed_dim, value_dim, bias=False))
+        self.g_proj = MultiwayWrapper(args, nn.Linear(embed_dim, value_dim, bias=False))
         
-        self.out_proj = MultiwayWrapper(args, nn.Linear(embed_dim * self.factor, embed_dim, bias=True))
+        self.out_proj = MultiwayWrapper(args, nn.Linear(value_dim, embed_dim, bias=False))
 
-        self.group_norm = MultiwayWrapper(args, LayerNorm(self.head_dim, eps=args.layernorm_eps, elementwise_affine=False))
+        self.group_norm = MultiwayWrapper(args, RMSNorm(self.head_dim, eps=args.norm_eps, elementwise_affine=False))
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -76,7 +72,6 @@ class MultiScaleRetention(nn.Module):
         nn.init.xavier_uniform_(self.v_proj.weight, gain=2 ** -2.5)
         nn.init.xavier_uniform_(self.g_proj.weight, gain=2 ** -2.5)
         nn.init.xavier_uniform_(self.out_proj.weight)
-        nn.init.constant_(self.out_proj.bias, 0.0)
 
     def parallel_forward(self, qr, kr, v, mask):
         bsz, tgt_len, embed_dim = v.size()
