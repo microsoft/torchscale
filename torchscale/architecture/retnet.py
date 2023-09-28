@@ -44,14 +44,17 @@ class RetNetRelPos(nn.Module):
             mask = torch.masked_fill(block_index[:, None] - block_index[None, :], ~mask.bool(), float("inf"))
             mask = torch.exp(mask * self.decay[:, None, None])
             mask = torch.nan_to_num(mask)
+            
+            value_inner_decay = mask[:, -1] / mask[:, -1].sum(dim=-1, keepdim=True)
+            value_inner_decay = value_inner_decay.unsqueeze(-1)
             scale = mask.sum(dim=-1, keepdim=True).sqrt()
-            mask = mask / scale
+            inner_mask = mask / scale
 
             cross_decay = torch.exp(self.decay * self.recurrent_chunk_size)
-            inner_decay = torch.exp(self.decay[:, None] * (block_index + 1))
+            query_inner_decay = torch.exp(self.decay[:, None] * (block_index + 1))
+            query_inner_decay = query_inner_decay[:, :, None] / (scale / mask[:, -1].sum(dim=-1)[:, None, None])
             cross_decay = cross_decay[:, None, None]
-            inner_decay = inner_decay[:, :, None] / (scale / scale[:, -1, None])
-            retention_rel_pos = ((sin, cos), (mask, cross_decay, inner_decay))
+            retention_rel_pos = ((sin, cos), (inner_mask, cross_decay, query_inner_decay, value_inner_decay))
         else:
             index = torch.arange(slen).to(self.decay)
             sin = torch.sin(index[:, None] * self.angle[None, :])
@@ -346,7 +349,6 @@ class RetNetDecoder(nn.Module):
             slen = prev_output_tokens.size(1)
         # relative position
         retention_rel_pos = self.retnet_rel_pos(slen, incremental_state is not None and not is_first_step, chunkwise_recurrent=self.chunkwise_recurrent)
-        retention_rel_pos_no_block = self.retnet_rel_pos(slen, incremental_state is not None and not is_first_step, chunkwise_recurrent=False)
         # decoder layers
         inner_states = [x]
 
@@ -360,21 +362,13 @@ class RetNetDecoder(nn.Module):
             else:
                 if idx not in incremental_state:
                     incremental_state[idx] = {}
-
-            x_no_block, _ = layer(
-                x,
-                incremental_state[idx] if incremental_state is not None else None,
-                retention_rel_pos=retention_rel_pos_no_block,
-                chunkwise_recurrent=False,
-            )
+                    
             x, l_aux_i = layer(
                 x,
                 incremental_state[idx] if incremental_state is not None else None,
                 retention_rel_pos=retention_rel_pos,
                 chunkwise_recurrent=self.chunkwise_recurrent,
             )
-            print(x[0], x_no_block[0], (x - x_no_block).abs().max(), (x - x_no_block).abs().sum())
-            exit()
             l_aux.append(l_aux_i)
             inner_states.append(x)
             

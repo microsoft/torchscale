@@ -116,7 +116,7 @@ class MultiScaleRetention(nn.Module):
         qr, kr, v,
         inner_mask
     ):
-        mask, cross_decay, inner_decay = inner_mask
+        mask, cross_decay, query_inner_decay, value_inner_decay = inner_mask
         bsz, tgt_len, embed_dim = v.size()
         chunk_len = mask.size(1)
         num_chunks = tgt_len // chunk_len
@@ -136,8 +136,7 @@ class MultiScaleRetention(nn.Module):
         inner_output = torch.matmul(qk_mat, v) # bsz * num_heads * num_value_heads * chunk_len * head_dim
         
         # reduce kv in one chunk
-        kv = kr_t @ (v * mask[:, -1, :, None])
-        kv = kv.view(bsz, num_chunks, self.num_heads, self.key_dim, self.head_dim)
+        kv = kr_t @ (v * value_inner_decay)
 
         kv_recurrent = []
         cross_scale = []
@@ -158,7 +157,7 @@ class MultiScaleRetention(nn.Module):
         align_inner_scale = all_scale / inner_scale
         align_cross_scale = all_scale / cross_scale
 
-        cross_output = (qr * inner_decay) @ kv_recurrent
+        cross_output = (qr * query_inner_decay) @ kv_recurrent
         output = inner_output / align_inner_scale + cross_output / align_cross_scale
         # output = inner_output / cross_scale + cross_output / inner_scale
 
