@@ -63,7 +63,7 @@ class MultiScaleRetention(nn.Module):
         
         self.out_proj = MultiwayWrapper(args, nn.Linear(value_dim, embed_dim, bias=False))
 
-        self.group_norm = MultiwayWrapper(args, RMSNorm(self.head_dim, eps=args.norm_eps, elementwise_affine=False))
+        self.group_norm = MultiwayWrapper(args, RMSNorm(self.head_dim, eps=args.layernorm_eps, elementwise_affine=False))
         self.reset_parameters()
 
     def reset_parameters(self):
