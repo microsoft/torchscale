@@ -96,6 +96,8 @@ def get_activation_fn(activation):
         return F.relu
     elif activation == "gelu":
         return F.gelu
+    elif activation == "swish":
+        return F.silu
     else:
         raise NotImplementedError
 

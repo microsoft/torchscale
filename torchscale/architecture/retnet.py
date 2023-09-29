@@ -11,14 +11,12 @@ from fairscale.nn import checkpoint_wrapper, wrap
 
 from torchscale.architecture.utils import init_bert_params
 from torchscale.component.droppath import DropPath
-from torchscale.component.feedforward_network import FeedForwardNetwork, make_experts
+from torchscale.component.feedforward_network import make_experts
+from torchscale.component.gate_linear_unit import GLU
 from torchscale.component.multiscale_retention import MultiScaleRetention
 from torchscale.component.xmoe.moe_layer import MOELayer
 from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
-try:
-    from apex.normalization import FusedLayerNorm as LayerNorm
-except ModuleNotFoundError:
-    from torch.nn import LayerNorm
+from torchscale.component.rms_norm import RMSNorm
     
     
 class RetNetRelPos(nn.Module):
@@ -46,14 +44,17 @@ class RetNetRelPos(nn.Module):
             mask = torch.masked_fill(block_index[:, None] - block_index[None, :], ~mask.bool(), float("inf"))
             mask = torch.exp(mask * self.decay[:, None, None])
             mask = torch.nan_to_num(mask)
+            
+            value_inner_decay = mask[:, -1] / mask[:, -1].sum(dim=-1, keepdim=True)
+            value_inner_decay = value_inner_decay.unsqueeze(-1)
             scale = mask.sum(dim=-1, keepdim=True).sqrt()
-            mask = mask / scale
+            inner_mask = mask / scale
 
             cross_decay = torch.exp(self.decay * self.recurrent_chunk_size)
-            inner_decay = torch.exp(self.decay[:, None] * (block_index + 1))
+            query_inner_decay = torch.exp(self.decay[:, None] * (block_index + 1))
+            query_inner_decay = query_inner_decay[:, :, None] / (scale / mask[:, -1].sum(dim=-1)[:, None, None])
             cross_decay = cross_decay[:, None, None]
-            inner_decay = inner_decay[:, :, None] / (scale / scale[:, -1, None])
-            retention_rel_pos = ((sin, cos), (mask, cross_decay, inner_decay))
+            retention_rel_pos = ((sin, cos), (inner_mask, cross_decay, query_inner_decay, value_inner_decay))
         else:
             index = torch.arange(slen).to(self.decay)
             sin = torch.sin(index[:, None] * self.angle[None, :])
@@ -91,7 +92,7 @@ class DecoderLayer(nn.Module):
 
         self.normalize_before = args.decoder_normalize_before
 
-        self.retention_layer_norm = LayerNorm(self.embed_dim, eps=args.layernorm_eps)
+        self.retention_layer_norm = RMSNorm(self.embed_dim, eps=args.layernorm_eps)
 
         self.is_moe_layer = is_moe_layer
         self.ffn_dim = args.decoder_ffn_embed_dim
@@ -123,7 +124,7 @@ class DecoderLayer(nn.Module):
             experts = make_experts(args, self.embed_dim, self.ffn_dim)
             self.moe_layer = MOELayer(gate, experts, args)
 
-        self.final_layer_norm = LayerNorm(self.embed_dim, eps=args.layernorm_eps)
+        self.final_layer_norm = RMSNorm(self.embed_dim, eps=args.layernorm_eps)
 
         if args.deepnorm:
             self.alpha = math.pow(2.0 * args.decoder_layers, 0.25)
@@ -131,20 +132,19 @@ class DecoderLayer(nn.Module):
             self.alpha = 1.0
 
     def build_ffn(self, embed_dim, args):
-        return FeedForwardNetwork(
+        return GLU(
             embed_dim,
             self.ffn_dim,
             args.activation_fn,
             args.dropout,
             args.activation_dropout,
-            args.layernorm_eps,
-            args.subln,
         )
 
     def build_retention(self, embed_dim, args):
         return MultiScaleRetention(
             args,
             embed_dim,
+            args.decoder_value_embed_dim,
             args.decoder_retention_heads,
         )
 
@@ -225,7 +225,7 @@ class RetNetDecoder(nn.Module):
             self.output_projection = output_projection
 
         if args.layernorm_embedding:
-            self.layernorm_embedding = LayerNorm(embed_dim, eps=args.layernorm_eps)
+            self.layernorm_embedding = RMSNorm(embed_dim, eps=args.layernorm_eps)
         else:
             self.layernorm_embedding = None
 
@@ -245,7 +245,7 @@ class RetNetDecoder(nn.Module):
         self.num_layers = len(self.layers)
 
         if args.decoder_normalize_before:
-            self.layer_norm = LayerNorm(embed_dim, eps=args.layernorm_eps)
+            self.layer_norm = RMSNorm(embed_dim, eps=args.layernorm_eps)
         else:
             self.layer_norm = None
 
@@ -264,17 +264,6 @@ class RetNetDecoder(nn.Module):
                     or "v_proj" in name
                 ):
                     p.data.div_(init_scale)
-
-        if args.subln:
-            init_scale = math.sqrt(math.log(args.decoder_layers * 2))
-            for name, p in self.named_parameters():
-                if (
-                    "fc1" in name
-                    or "fc2" in name
-                    or "out_proj" in name
-                    or "v_proj" in name
-                ):
-                    p.data.mul_(init_scale)
 
     def build_output_projection(
         self,
@@ -360,7 +349,6 @@ class RetNetDecoder(nn.Module):
             slen = prev_output_tokens.size(1)
         # relative position
         retention_rel_pos = self.retnet_rel_pos(slen, incremental_state is not None and not is_first_step, chunkwise_recurrent=self.chunkwise_recurrent)
-
         # decoder layers
         inner_states = [x]
 
@@ -374,7 +362,7 @@ class RetNetDecoder(nn.Module):
             else:
                 if idx not in incremental_state:
                     incremental_state[idx] = {}
-
+                    
             x, l_aux_i = layer(
                 x,
                 incremental_state[idx] if incremental_state is not None else None,
