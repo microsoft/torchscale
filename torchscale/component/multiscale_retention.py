@@ -71,7 +71,7 @@ class MultiScaleRetention(nn.Module):
         nn.init.xavier_uniform_(self.k_proj.weight, gain=2 ** -2.5)
         nn.init.xavier_uniform_(self.v_proj.weight, gain=2 ** -2.5)
         nn.init.xavier_uniform_(self.g_proj.weight, gain=2 ** -2.5)
-        nn.init.xavier_uniform_(self.out_proj.weight)
+        nn.init.xavier_uniform_(self.out_proj.weight, gain=2 ** -1)
 
     def parallel_forward(self, qr, kr, v, mask):
         bsz, tgt_len, embed_dim = v.size()
