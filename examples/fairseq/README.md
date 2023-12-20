@@ -251,6 +251,45 @@ python -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 train.py \
     --use-xmoe
 ```
 
+### LongNet Model
+
+```bash
+cd examples/fairseq/
+python -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 train.py \
+    ${PATH_TO_DATA} \
+    --num-workers 2 \
+    --activation-fn gelu \
+    --share-decoder-input-output-embed \
+    --validate-interval-updates 1000 \
+    --save-interval-updates 1000 \
+    --no-epoch-checkpoints \
+    --memory-efficient-fp16 \
+    --fp16-init-scale 4 \
+    --arch lm_base \
+    --task language_modeling \
+    --sample-break-mode none \
+    --tokens-per-sample 4096 \
+    --optimizer adam --adam-betas "(0.9, 0.98)" \
+    --adam-eps 1e-08 \
+    --clip-norm 0.0 \
+    --lr 5e-4 \
+    --lr-scheduler polynomial_decay \
+    --warmup-updates 750 \
+    --dropout 0.1 \
+    --attention-dropout 0.1 \
+    --weight-decay 0.01 \
+    --batch-size 4 \
+    --update-freq 1 \
+    --required-batch-size-multiple 1 \
+    --total-num-update 50000 \
+    --max-update 50000 \
+    --seed 1 \
+    --ddp-backend=c10d \
+    --flash-attention \
+    --segment-length [2048,4096] \
+    --dilated-ratio [1,2]
+```
+
 ## Example: Machine Translation
 
 ### Data Format

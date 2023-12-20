@@ -6,6 +6,7 @@ import math
 import torch
 import torch.nn.functional as F
 from torch import nn
+from einops import rearrange
 try:
     from apex.normalization import FusedLayerNorm as LayerNorm
 except ModuleNotFoundError:
@@ -13,6 +14,7 @@ except ModuleNotFoundError:
 
 from .multiway_network import MultiwayWrapper
 from .xpos_relative_position import XPOS
+from .flash_attention import flash_attn_func
 
 
 class MultiheadAttention(nn.Module):
@@ -32,6 +34,7 @@ class MultiheadAttention(nn.Module):
         self.num_heads = num_heads
         self.head_dim = embed_dim // num_heads
         self.scaling = self.head_dim**-0.5
+        self.dropout = dropout
 
         self.self_attention = self_attention
         self.encoder_decoder_attention = encoder_decoder_attention
@@ -62,6 +65,47 @@ class MultiheadAttention(nn.Module):
         nn.init.xavier_uniform_(self.out_proj.weight)
         nn.init.constant_(self.out_proj.bias, 0.0)
 
+    def attention_ops(self, q, k, v, key_padding_mask=None, attn_mask=None, rel_pos=None, is_causal=False):
+        if not self.args.flash_attention:
+            q *= self.scaling
+            attn_weights = torch.bmm(q, k.transpose(1, 2))
+
+            if attn_mask is not None:
+                attn_weights = torch.nan_to_num(attn_weights)
+                attn_mask = attn_mask.unsqueeze(0)
+                attn_weights += attn_mask
+
+            if key_padding_mask is not None:
+                attn_weights = rearrange(attn_weights, '(b h) t s -> b h t s', h=self.num_heads)
+                attn_weights = attn_weights.masked_fill(
+                    key_padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool),
+                    float("-inf"),
+                )
+                attn_weights = rearrange(attn_weights, 'b h t s -> (b h) t s')
+
+            if rel_pos is not None:
+                rel_pos = rel_pos.view(attn_weights.size())
+                attn_weights = attn_weights + rel_pos
+
+            attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).type_as(
+                attn_weights
+            )
+            attn_probs = self.dropout_module(attn_weights)
+
+            attn = torch.bmm(attn_probs, v)
+            attn = rearrange(attn, '(b h) l d -> b l (h d)', h=self.num_heads)
+        else:
+            assert flash_attn_func is not None
+            assert rel_pos is None
+            q = rearrange(q, '(b h) l d -> b l h d', h=self.num_heads)
+            k = rearrange(k, '(b h) l d -> b l h d', h=self.num_heads)
+            v = rearrange(v, '(b h) l d -> b l h d', h=self.num_heads)
+            attn, lse = flash_attn_func(q, k, v, self.dropout, attn_mask, None, is_causal)
+            attn = rearrange(attn, 'b l h d -> b l (h d)')
+            attn_weights = lse[:, :, :attn.size(1)]
+
+        return attn, attn_weights
+
     def forward(
         self,
         query,
@@ -72,6 +116,7 @@ class MultiheadAttention(nn.Module):
         attn_mask=None,
         rel_pos=None,
         is_first_step=False,
+        is_causal=False,
     ):
         bsz, tgt_len, embed_dim = query.size()
         src_len = tgt_len
@@ -85,14 +130,10 @@ class MultiheadAttention(nn.Module):
         q = self.q_proj(query)
         k = self.k_proj(key)
         v = self.v_proj(value)
-        q *= self.scaling
 
-        q = q.view(bsz, tgt_len, self.num_heads, self.head_dim).transpose(1, 2)
-        k = k.view(bsz, src_len, self.num_heads, self.head_dim).transpose(1, 2)
-        v = v.view(bsz, src_len, self.num_heads, self.head_dim).transpose(1, 2)
-        q = q.reshape(bsz * self.num_heads, tgt_len, self.head_dim)
-        k = k.reshape(bsz * self.num_heads, src_len, self.head_dim)
-        v = v.reshape(bsz * self.num_heads, src_len, self.head_dim)
+        q = rearrange(q, 'b l (h d) -> (b h) l d', h=self.num_heads)
+        k = rearrange(k, 'b l (h d) -> (b h) l d', h=self.num_heads)
+        v = rearrange(v, 'b l (h d) -> (b h) l d', h=self.num_heads)
 
         if incremental_state is not None:
             if "prev_key" in incremental_state:
@@ -120,39 +161,11 @@ class MultiheadAttention(nn.Module):
             k = self.xpos(k, offset=0, downscale=True)
             q = self.xpos(q, offset=offset, downscale=False)
 
-        attn_weights = torch.bmm(q, k.transpose(1, 2))
-
-        if attn_mask is not None:
-            attn_weights = torch.nan_to_num(attn_weights)
-            attn_mask = attn_mask.unsqueeze(0)
-            attn_weights += attn_mask
-
-        if key_padding_mask is not None:
-            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
-            attn_weights = attn_weights.masked_fill(
-                key_padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool),
-                float("-inf"),
-            )
-            attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
-
-        if rel_pos is not None:
-            rel_pos = rel_pos.view(attn_weights.size())
-            attn_weights = attn_weights + rel_pos
-
-        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).type_as(
-            attn_weights
-        )
-        attn_probs = self.dropout_module(attn_weights)
-
-        attn = torch.bmm(attn_probs, v)
-        attn = attn.transpose(0, 1).reshape(tgt_len, bsz, embed_dim).transpose(0, 1)
+        attn, attn_weights = self.attention_ops(q, k, v, key_padding_mask=key_padding_mask, attn_mask=attn_mask, rel_pos=rel_pos, is_causal=is_causal)
 
         if self.inner_attn_ln is not None:
             attn = self.inner_attn_ln(attn)
 
         attn = self.out_proj(attn)
-        attn_weights = attn_weights.view(
-            bsz, self.num_heads, tgt_len, src_len
-        ).transpose(1, 0)
 
         return attn, attn_weights
