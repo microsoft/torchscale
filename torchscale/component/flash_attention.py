@@ -113,7 +113,7 @@ try:
                 grads = _memory_efficient_attention_backward(
                     ctx=op_ctx, inp=inp, grad=grad, op=ctx.op_bw
                 )
-                return grads.dq, grads.dk, grads.dv, grads.db, None, None
+                return grads.dq, grads.dk, grads.dv, grads.db, None, None, None
         
         flash_attn_func = FlashAttnFunc.apply
 except ModuleNotFoundError:
