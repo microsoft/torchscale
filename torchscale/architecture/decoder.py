@@ -155,6 +155,7 @@ class DecoderLayer(nn.Module):
             attn_mask=self_attn_mask,
             rel_pos=self_attn_rel_pos,
             is_first_step=is_first_step,
+            is_causal=True,
         )
         x = self.dropout_module(x)
 
@@ -430,13 +431,16 @@ class Decoder(nn.Module):
 
         for idx, layer in enumerate(self.layers):
             if incremental_state is None or is_first_step:
-                self_attn_mask = torch.triu(
-                    torch.zeros([x.size(1), x.size(1)])
-                    .float()
-                    .fill_(float("-inf"))
-                    .type_as(x),
-                    1,
-                )
+                if not self.args.flash_attention:
+                    self_attn_mask = torch.triu(
+                        torch.zeros([x.size(1), x.size(1)])
+                        .float()
+                        .fill_(float("-inf"))
+                        .type_as(x),
+                        1,
+                    )
+                else:
+                    self_attn_mask = None
                 if is_first_step and incremental_state is not None:
                     if idx not in incremental_state:
                         incremental_state[idx] = {}

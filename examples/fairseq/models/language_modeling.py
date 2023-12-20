@@ -25,6 +25,7 @@ from omegaconf import II
 
 from torchscale.architecture.config import DecoderConfig
 from torchscale.architecture.decoder import Decoder
+from torchscale.model.LongNet import LongNetDecoder
 
 DEFAULT_MAX_TARGET_POSITIONS = 1024
 logger = logging.getLogger(__name__)
@@ -196,6 +197,19 @@ class LanguageConfig(FairseqDataclass):
     xpos_scale_base: Optional[int] = field(
         default=512,
     )
+    flash_attention: Optional[bool] = field(
+        default=False,
+    )
+    seq_parallel: Optional[bool] = field(
+        default=False,
+    )
+    segment_length: Optional[str] = field(
+        default='',
+    )
+    dilated_ratio: Optional[str] = field(
+        default='',
+    )
+
 
 
 @register_model("lm", dataclass=LanguageConfig)
@@ -256,7 +270,13 @@ class LanguageModel(FairseqLanguageModel):
         config = DecoderConfig()
         config.override(args)
 
-        decoder = LMDecoder(
+        if args.segment_length != '':
+            assert args.dilated_ratio != ''
+            DECODER_CLASS = LongNetLMDecoder
+        else:
+            DECODER_CLASS = LMDecoder
+
+        decoder = DECODER_CLASS(
             config,
             embed_tokens,
             embed_positions,
@@ -273,6 +293,25 @@ class LanguageModel(FairseqLanguageModel):
 
 
 class LMDecoder(Decoder, FairseqIncrementalDecoder):
+    def forward(self, src_tokens, **kwargs):
+        self_attn_padding_mask = src_tokens.eq(self.dictionary.pad())
+        return super().forward(src_tokens, self_attn_padding_mask, **kwargs)
+
+    def max_positions(self):
+        return self.embed_positions.max_positions
+
+    def reorder_incremental_state_scripting(
+        self,
+        incremental_state,
+        new_order,
+    ):
+        for module in incremental_state:
+            for key in incremental_state[module]:
+                result = incremental_state[module][key].index_select(0, new_order)
+                incremental_state[module][key] = result
+
+
+class LongNetLMDecoder(LongNetDecoder, FairseqIncrementalDecoder):
     def forward(self, src_tokens, **kwargs):
         self_attn_padding_mask = src_tokens.eq(self.dictionary.pad())
         return super().forward(src_tokens, self_attn_padding_mask, **kwargs)
