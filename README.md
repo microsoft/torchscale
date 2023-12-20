@@ -13,7 +13,7 @@ Fundamental research to develop new architectures for foundation models and A(G)
 - Capability - A [**Length-Extrapolatable**](https://arxiv.org/abs/2212.10554) Transformer
 - Efficiency - [**X-MoE**](https://arxiv.org/abs/2204.09179): scalable & finetunable sparse Mixture-of-Experts (MoE)
 
-### Revolutionizing Transformers for (M)LLMs and AI
+### The Revolution of Model Architecture
 - [**BitNet**](https://arxiv.org/abs/2310.11453): 1-bit Transformers for Large Language Models
 - [**RetNet**](https://arxiv.org/abs/2307.08621): Retentive Network: A Successor to Transformer for Large Language Models
 - [**LongNet**](https://arxiv.org/abs/2307.02486): Scaling Transformers to 1,000,000,000 Tokens
