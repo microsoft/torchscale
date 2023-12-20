@@ -1,0 +1,169 @@
+# Fine-tuning LongViT on TCGA Subtyping
+
+## Setup
+
+1. Download TCGA diagnostic whole slides from [NIH Genomic Data Commons Data Portal](https://portal.gdc.cancer.gov/), and organize the dataset (e.g., BRCA WSIs) as following structure:
+
+```
+/path/to/your_WSIs/
+  TCGA-3C-AALI-01Z-00-DX1.F6E9A5DF-D8FB-45CF-B4BD-C6B76294C291.svs           
+  ...
+  TCGA-4H-AAAK-01Z-00-DX1.ABF1B042-1970-4E28-8671-43AAD393D2F9.svs
+  ...       
+```
+
+2. Download [dataset annotation csv](https://github.com/mahmoodlab/HIPT/tree/master/2-Weakly-Supervised-Subtyping/dataset_csv) and [splits for cross validation](https://github.com/mahmoodlab/HIPT/tree/master/2-Weakly-Supervised-Subtyping/splits/10foldcv_subtype) from the HIPT repository.
+
+3. Generate the index json files of each split using the following command.
+```
+# Modify the `csv_path` and `csv_split_path` to your path.
+python data_preprocessing/create_tcga_subtyping_index.py
+```
+
+4. Resize whole slide images to the desired size for finetuning.
+```
+python data_preprocessing/convert_wsi_to_images.py /path/to/your_WSIs /path/to/your_resized_WSIs ${target_size} ${wsi_level}
+```
+
+5. (Optional) For very large images (e.g., 32,768x32,768), we suggest parallelizing the training across multiple GPU devices due to the constraints of computation and memory. We split the sequence of millions of patches along the sequence dimension.
+```
+# num_splits is equal to the number of GPUs you used (e.g., 8 in our experiment) 
+python data_preprocessing/split_to_small_images.py /path/to/your_resized_WSIs /path/to/your_splited_WSIs --num_splits ${num_splits}
+```
+
+6. (Optional) We find performing image augmentation slightly improves the performance. For very large images (e.g., 32,768x32,768), we perform the augmentation and cache the resulted images of each epoch. 
+```
+# Run the command 10 times (number of epochs in finetuning) using i from 0-9
+python data_preprocessing/cache_transformed_images.py /path/to/your_resized_WSIs /path/to/your_augmentated_WSIs/epoch_$i --input_size 32768
+```
+
+Split these cached images as in step 5 and organize the data as following structure:
+```
+/path/to/your_splited_WSIs/
+  epoch_0/
+    TCGA-4H-AAAK-01Z-00-DX1.ABF1B042-1970-4E28-8671-43AAD393D2F9_0.jpg
+    ...
+    TCGA-4H-AAAK-01Z-00-DX1.ABF1B042-1970-4E28-8671-43AAD393D2F9_7.jpg
+    ...
+  epoch_1/
+    TCGA-4H-AAAK-01Z-00-DX1.ABF1B042-1970-4E28-8671-43AAD393D2F9_0.jpg
+    ...
+    TCGA-4H-AAAK-01Z-00-DX1.ABF1B042-1970-4E28-8671-43AAD393D2F9_7.jpg
+    ...     
+  ...
+  epoch_5/
+  ...
+  epoch_9/
+  wo_augmentation/   
+```
+
+
+## Example: Fine-tuning LongViT on TCGA Subtyping
+
+The LongViT model can be fine-tuned using 8 V100-32GB. For images with a size less than or equal to 16,384x16,384, we can directly perform finetuning without using sequence parallel.
+
+```bash
+# IMAGE_SIZE - {1024, 4096, 8192, 16384}
+# TASK - {"brca", "kidney", "lung"}  
+# K_FOLD - {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}   
+python -m torch.distributed.launch --nproc_per_node=8 run_longvit_finetuning.py \
+        --input_size ${IMAGE_SIZE} \
+        --model longvit_small_patch32_${IMAGE_SIZE} \
+        --task tcga_${TASK}_subtyping \
+        --batch_size 1 \
+        --layer_decay 1.0 \
+        --lr 5e-5 \
+        --update_freq 1 \
+        --epochs 10 \
+        --warmup_epochs 1 \
+        --drop_path 0.1 \
+        --finetune /your_longvit_model_path/longvit_small_patch32_1024.pth
+        --data_path ./subtyping_split_index/tcga_${TASK} \
+        --image_dir /path/to/your_resized_WSIs  \
+        --output_dir /path/to/save/your_model \
+        --log_dir /path/to/save/your_model/log \
+        --weight_decay 0.05 \
+        --seed 42 \
+        --save_ckpt_freq 5 \
+        --k_fold ${K_FOLD} \
+        --num_workers 1 \
+        --enable_deepspeed \
+        --model_key teacher \
+        --randaug
+```
+- `--finetune`: weight path of your pretrained models; please download the pretrained model weights in [README.md](../README.md#pretraining).
+- `--randaug`: perform image augmentation.
+
+
+Sequence parallel of training on 32,768x32,768 images:
+
+```bash
+# TASK - {"brca", "kidney", "lung"}  
+# K_FOLD - {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}   
+python -m torch.distributed.launch --nproc_per_node=8 run_longvit_finetuning.py \
+        --input_size 32768 \
+        --model longvit_small_patch32_32768 \
+        --task tcga_${TASK}_subtyping \
+        --batch_size 2 \
+        --layer_decay 1.0 \
+        --lr 5e-5 \
+        --update_freq 4 \
+        --epochs 10 \
+        --warmup_epochs 1 \
+        --drop_path 0.1 \
+        --finetune /your_longvit_model_path/longvit_small_patch32_1024.pth
+        --data_path ./subtyping_split_index/tcga_${TASK} \
+        --image_dir /path/to/your_splited_WSIs  \
+        --output_dir /path/to/save/your_model \
+        --log_dir /path/to/save/your_model/log \
+        --weight_decay 0.05 \
+        --seed 42 \
+        --save_ckpt_freq 5 \
+        --k_fold ${K_FOLD} \
+        --num_workers 1 \
+        --enable_deepspeed \
+        --model_key teacher \
+        --seq_parallel \
+        --cached_randaug
+```
+- `--finetune`: weight path of your pretrained models; please download the pretrained model weights in [README.md](../README.md#pretraining).
+- `--seq_parallel`: parallelize the training for very large images.
+- `--cached_randaug`: perform training on the cached augmented images.
+
+
+## Example: Evaluate LongViT on TCGA Subtyping
+
+```bash
+# IMAGE_SIZE - {1024, 4096, 8192, 16384, 32768}
+# TASK - {"brca", "kidney", "lung"}  
+# K_FOLD - {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}  
+python -m torch.distributed.launch --nproc_per_node=1 run_longvit_finetuning.py \
+        --input_size ${IMAGE_SIZE} \
+        --model longvit_small_patch32_${IMAGE_SIZE} \
+        --task tcga_${TASK}_subtyping \
+        --batch_size 1 \
+        --layer_decay 1.0 \
+        --lr 5e-5 \
+        --update_freq 1 \
+        --epochs 10 \
+        --warmup_epochs 1 \
+        --drop_path 0.1 \
+        --finetune /path/to/save/your_model/checkpoint-best/mp_rank_00_model_states.pt \
+        --data_path ./subtyping_split_index/tcga_${TASK} \
+        --image_dir /path/to/your_resized_WSIs \
+        --output_dir /path/to/save/your_model \
+        --log_dir /path/to/save/your_model/log \
+        --weight_decay 0.05 \
+        --seed 42 \
+        --save_ckpt_freq 5 \
+        --k_fold ${K_FOLD} \
+        --num_workers 1 \
+        --enable_deepspeed \
+        --model_key module \
+        --eval \
+        --no_auto_resume
+```
+- `--eval`: performing evaluation on test set.
+- `--finetune`: best val model used for test.
+
+For the model trained with sequence parallel, add `--seq_parallel` and use the same number of GPUs as training to perform evaluation.
