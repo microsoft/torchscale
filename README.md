@@ -268,6 +268,7 @@ If you find this repository useful, please consider citing our work:
 }
 ```
 
+```
 @article{longvit,
   title     = {When an Image is Worth 1,024 x 1,024 Words: A Case Study in Computational Pathology},
   author    = {Wenhui Wang and Shuming Ma and Hanwen Xu and Naoto Usuyama and Jiayu Ding and Hoifung Poon and Furu Wei},
@@ -275,6 +276,7 @@ If you find this repository useful, please consider citing our work:
   volume    = {abs/2312.03558},
   year      = {2023}
 }
+```
 
 ## Contributing
 
