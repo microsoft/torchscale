@@ -20,6 +20,7 @@ Fundamental research to develop new architectures for foundation models and A(G)
 
 ## News
 
+- December, 2023: [LongNet](torchscale/model/LongNet.py) and [LongViT](examples/longvit/README.md) released
 - October, 2023: Update RMSNorm and SwiGLU as the default module in RetNet
 - November, 2022: TorchScale 0.1.1 released [[Paper](https://arxiv.org/abs/2211.13184)] [[PyPI](https://pypi.org/project/torchscale/)]
 
@@ -141,6 +142,8 @@ We have examples of how to use TorchScale in the following scenarios/tasks:
   * [Encoder/BERT](examples/fairseq/README.md#example-bert-pretraining)
 
 - Vision
+
+  * [LongViT](examples/longvit/README.md)
 
   * ViT/BEiT [In progress]
 
