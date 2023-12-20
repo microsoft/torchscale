@@ -339,23 +339,13 @@ class Encoder(nn.Module):
     ):
         assert src_tokens is not None or token_embeddings is not None
 
-        if encoder_padding_mask is None:
-            if src_tokens is not None:
-                encoder_padding_mask = torch.zeros_like(
-                    src_tokens, device=src_tokens.device
-                ).bool()
-            else:
-                encoder_padding_mask = torch.zeros(
-                    [token_embeddings.size(0), token_embeddings.size(1)],
-                    device=token_embeddings.device,
-                ).bool()
-
         if multiway_split_position is not None:
             assert self.args.multiway
             self.apply(set_split_position(multiway_split_position))
 
         x, encoder_embedding = self.forward_embedding(src_tokens, token_embeddings, positions)
-        x = x * (1 - encoder_padding_mask.unsqueeze(-1).type_as(x))
+        if encoder_padding_mask is not None:
+            x = x * (1 - encoder_padding_mask.unsqueeze(-1).type_as(x))
 
         encoder_states = []
 
