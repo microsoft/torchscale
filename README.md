@@ -38,6 +38,18 @@ cd torchscale
 pip install -e .
 ```
 
+For faster training install [Flash Attention](https://github.com/Dao-AILab/flash-attention) for Turing, Ampere, Ada, or Hopper GPUs:
+```
+pip install flash-attn
+```
+or [xFormers](https://github.com/facebookresearch/xformers) for Volta, Turing, Ampere, Ada, or Hopper GPUs:
+```
+# cuda 11.8 version
+pip3 install -U xformers --index-url https://download.pytorch.org/whl/cu118
+# cuda 12.1 version
+pip3 install -U xformers --index-url https://download.pytorch.org/whl/cu121
+```
+
 ## Getting Started
 
 It takes only several lines of code to create a model with the above fundamental research features enabled. Here is how to quickly obtain a BERT-like encoder:
@@ -84,6 +96,21 @@ It takes only several lines of code to create a RetNet model:
 >>> retnet = RetNetDecoder(config)
 
 >>> print(retnet)
+```
+
+For LongNet models ([Flash Attention](https://github.com/Dao-AILab/flash-attention) required):
+```python
+>>> import torch
+>>> from torchscale.architecture.config import EncoderConfig, DecoderConfig
+>>> from torchscale.model.longnet import LongNetEncoder, LongNetDecoder
+
+# Creating a LongNet encoder with the dilated pattern of segment_length=[2048,4096] and dilated_ratio=[1,2]
+>>> config = EncoderConfig(vocab_size=64000, segment_length='[2048,4096]', dilated_ratio='[1,2]', flash_attention=True)
+>>> longnet = LongNetEncoder(config)
+
+# Creating a LongNet decoder with the dilated pattern of segment_length=[2048,4096] and dilated_ratio=[1,2]
+>>> config = DecoderConfig(vocab_size=64000, segment_length='[2048,4096]', dilated_ratio='[1,2]', flash_attention=True)
+>>> longnet = LongNetDecoder(config)
 ```
 
 ## Key Features
@@ -230,6 +257,24 @@ If you find this repository useful, please consider citing our work:
   year      = {2023}
 }
 ```
+
+```
+@article{longnet,
+  author={Jiayu Ding and Shuming Ma and Li Dong and Xingxing Zhang and Shaohan Huang and Wenhui Wang and Nanning Zheng and Furu Wei},
+  title     = {{LongNet}: Scaling Transformers to 1,000,000,000 Tokens},
+  journal   = {ArXiv},
+  volume    = {abs/2307.02486},
+  year      = {2023}
+}
+```
+
+@article{longvit,
+  title     = {When an Image is Worth 1,024 x 1,024 Words: A Case Study in Computational Pathology},
+  author    = {Wenhui Wang and Shuming Ma and Hanwen Xu and Naoto Usuyama and Jiayu Ding and Hoifung Poon and Furu Wei},
+  journal   = {ArXiv},
+  volume    = {abs/2312.03558},
+  year      = {2023}
+}
 
 ## Contributing
 
