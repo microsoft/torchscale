@@ -144,6 +144,8 @@ For LongNet models ([Flash Attention](https://github.com/Dao-AILab/flash-attenti
 - [Retentive Network: A Successor to Transformer for Large Language Models](https://arxiv.org/abs/2307.08621)
   * created by `config = RetNetConfig(vocab_size=64000)` and `retnet = RetNetDecoder(config)`.
 
+- [LongNet: Scaling Transformers to 1,000,000,000 Tokens](https://arxiv.org/abs/2307.02486)
+  
 Most of the features above can be used by simply passing the corresponding parameters to the config. For example:
 
 ```python
