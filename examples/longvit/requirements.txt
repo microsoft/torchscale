@@ -1,6 +1,6 @@
 torch==2.0.0
 timm==0.6.13
-Pillow==10.0.0
+Pillow==10.2.0
 blobfile==2.0.2
 mypy==1.4.1
 numpy==1.22.4
