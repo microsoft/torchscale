@@ -25,7 +25,7 @@ from omegaconf import II
 
 from torchscale.architecture.config import DecoderConfig
 from torchscale.architecture.decoder import Decoder
-from torchscale.model.LongNet import LongNetDecoder
+from torchscale.model.longnet import LongNetDecoder
 
 DEFAULT_MAX_TARGET_POSITIONS = 1024
 logger = logging.getLogger(__name__)
