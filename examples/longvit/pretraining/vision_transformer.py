@@ -23,7 +23,7 @@ import torch.nn as nn
 
 from utils import trunc_normal_
 from torchscale.architecture.encoder import Encoder
-from torchscale.model.LongNet import LongNetEncoder
+from torchscale.model.longnet import LongNetEncoder
 from torchscale.architecture.config import EncoderConfig
 
 
