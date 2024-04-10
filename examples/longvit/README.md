@@ -16,7 +16,7 @@ pip install -v -U git+https://github.com/facebookresearch/xformers.git@v0.0.20#e
 We perform self-supervised pretraining on TCGA diagnostic slides using [DINO](https://arxiv.org/abs/2104.14294) objective. The detailed instructions can be found at [`get_started_for_tcga_pretraining.md`](get_started/get_started_for_tcga_pretraining.md).
 
 The link to the pretrained LongViT model on TCGA diagnostic slides:
-   - [`LongViT`](https://conversationhub.blob.core.windows.net/beit-share-public/longvit/longvit_small_patch32_1024.pth?sv=2021-10-04&st=2023-06-08T11%3A16%3A02Z&se=2033-06-09T11%3A16%3A00Z&sr=c&sp=r&sig=N4pfCVmSeq4L4tS8QbrFVsX6f6q844eft8xSuXdxU48%3D): #layer=12; hidden=384; FFN factor=4x; #head=16; patch=32x32
+   - [`LongViT`](): #layer=12; hidden=384; FFN factor=4x; #head=16; patch=32x32
 
 
 ## Fine-tuning on Subtyping Classification
