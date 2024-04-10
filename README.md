@@ -184,23 +184,6 @@ We have examples of how to use TorchScale in the following scenarios/tasks:
 
 We plan to provide more examples regarding different tasks (e.g. vision pretraining and speech recognition) and various deep learning toolkits (e.g. [DeepSpeed](https://github.com/microsoft/DeepSpeed) and [Megatron-LM](https://github.com/NVIDIA/Megatron-LM)). Any comments or PRs are welcome!
 
-## Results
-
-### Stability Evaluation
-
-<p align="center">
-  <img src="https://publicmodel.blob.core.windows.net/torchscale/pic/convergence.png?sv=2020-04-08&st=2023-08-11T03%3A09%3A09Z&se=2053-08-12T03%3A09%3A00Z&sr=c&sp=rl&sig=3b6nDda%2Fu0vD6E%2BhoTO%2BHfNSnSlUfgvXFV%2FCNKquWjE%3D" width="800"/>
-</p>
-
-The training curve is smooth by using TorchScale, while the baseline Transformer cannot converge.
-
-### Scaling-up Experiments
-
-<p align="center">
-  <img src="https://publicmodel.blob.core.windows.net/torchscale/pic/scaling_curve.png?sv=2020-04-08&st=2023-08-11T03%3A09%3A09Z&se=2053-08-12T03%3A09%3A00Z&sr=c&sp=rl&sig=3b6nDda%2Fu0vD6E%2BhoTO%2BHfNSnSlUfgvXFV%2FCNKquWjE%3D" width="800"/>
-</p>
-
-TorchScale supports arbitrary depths and widths, successfully scaling-up the models without pain.
 
 ## Acknowledgments
 
