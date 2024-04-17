@@ -8,7 +8,7 @@ pytest==7.2.2
 requests==2.31.0
 einops==0.6.1
 tensorboardX==1.8
-scipy==1.6.3
+scipy==1.10.0
 ftfy==6.1.1
 opencv-python==4.8.0.74
 pyarrow==9.0.0
