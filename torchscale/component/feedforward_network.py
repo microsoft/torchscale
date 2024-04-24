@@ -13,7 +13,7 @@ except ModuleNotFoundError:
 from .xmoe.global_groups import get_moe_group
 
 
-class set_torch_seed(object):
+class set_torch_seed:
     def __init__(self, seed):
         assert isinstance(seed, int)
         self.rng_state = self.get_rng_state()
